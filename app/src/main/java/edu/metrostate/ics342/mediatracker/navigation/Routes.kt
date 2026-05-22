@@ -9,7 +9,7 @@ object Routes {
     const val CONNECTIONS   = "connections"
     const val MY_PROFILE    = "my_profile"
     const val SETTINGS      = "settings"
-    const val MEDIA_DETAIL  = "detail"
+    const val MEDIA_DETAIL  = "media_detail/{mediaId}"
     const val WRITE_REVIEW  = "write_review/{mediaId}"
     const val USER_PROFILE  = "user_profile/{userId}"
     const val EDIT_PROFILE  = "edit_profile"
