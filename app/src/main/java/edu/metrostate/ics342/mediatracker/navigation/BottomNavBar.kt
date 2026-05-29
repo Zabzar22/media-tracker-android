@@ -1,7 +1,7 @@
 package edu.metrostate.ics342.mediatracker.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.navigation.compose.hierarchy
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.compose.material.icons.automirrored.filled.Feed
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.Feed
