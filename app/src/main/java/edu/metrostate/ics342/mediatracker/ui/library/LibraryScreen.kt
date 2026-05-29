@@ -1,6 +1,8 @@
 package edu.metrostate.ics342.mediatracker.ui.library
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -41,14 +43,17 @@ fun LibraryScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             listOf(
                 "all"   to edu.metrostate.ics342.mediatracker.R.string.filter_all,
                 "book"  to edu.metrostate.ics342.mediatracker.R.string.filter_books,
                 "movie" to edu.metrostate.ics342.mediatracker.R.string.filter_movies,
-                "show"  to edu.metrostate.ics342.mediatracker.R.string.filter_shows
+                "show"  to edu.metrostate.ics342.mediatracker.R.string.filter_shows,
+                "comic" to edu.metrostate.ics342.mediatracker.R.string.filter_comics,
+                "album" to edu.metrostate.ics342.mediatracker.R.string.filter_albums
             )
                 .forEach { (key, labelRes) ->
                     FilterChip(

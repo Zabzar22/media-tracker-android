@@ -25,6 +25,8 @@
     <string name="filter_books">Books</string>
     <string name="filter_movies">Movies</string>
     <string name="filter_shows">Shows</string>
+    <string name="filter_comics">Comics</string>
+    <string name="filter_albums">Albums</string>
     <string name="library_empty">Nothing here yet.\nSearch for something to add.</string>
     <string name="library_items_count">%1$d items</string>
     <string name="library_item_count">%1$d item</string>

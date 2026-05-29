@@ -1,6 +1,7 @@
 package edu.metrostate.ics342.mediatracker.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.navigation.compose.hierarchy
 import androidx.compose.material.icons.automirrored.filled.Feed
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.Feed
@@ -57,7 +58,7 @@ fun BottomNavBar(navController: NavController) {
 
     NavigationBar {
         bottomNavItems.forEach { item ->
-            val isSelected = currentDestination?.route == item.route
+            val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
 
             NavigationBarItem(
                 selected = isSelected,
