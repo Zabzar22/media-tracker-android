@@ -33,7 +33,7 @@ fun LibraryScreen(
 ) {
     val items     by viewModel.libraryItems.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    var selectedStatus by viewModel.filterState.collectAsState()
+    val selectedStatus by viewModel.filterState.collectAsState()
 
     var selectedType   by remember { mutableStateOf("all") }
 
