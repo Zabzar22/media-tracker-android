@@ -30,19 +30,19 @@
 <!-- Walk through the code you reviewed. What was the PR trying to do? Which files or
      functions did you focus on? -->
 
-I reviewed their registration work for this week, focusing on `RegisterScreen` and (if they have one) `RegisterViewModel` — specifically how they wired the text fields to state and where they put the sign-up and password-matching logic, since our pod handled that part a few different ways.
+I looked at their week-04 register PR — mainly how they wired the fields to state and where they put the sign-up and password-matching logic.
 
 ### What I Noticed
 
 <!-- Be specific. Name the thing you noticed and explain why it matters. -->
 
-Their `RegisterViewModel` takes `UserRepository` as a constructor parameter, but the screen builds it with `viewModel()` and nothing ever passes the repository in. That will crash at runtime, because `viewModel()` has no way to supply that argument — it needs either a no-arg constructor that creates `UserRepository` internally, or a `ViewModelProvider.Factory` to inject it.
+Their `RegisterViewModel` takes `UserRepository` as a constructor parameter but the screen builds it with `viewModel()` without passing it in, which crashes at runtime — it needs a no-arg constructor or a factory.
 
 ### Comments I Left
 
 <!-- Briefly summarize the comments you left on the PR. -->
 
-I left a suggestion pointing out the constructor/repository issue and why it would crash, and proposed instantiating `UserRepository` inside the ViewModel as the simplest fix for now.
+Pointed out the constructor/repository crash and suggested just creating `UserRepository` inside the ViewModel for now.
 
 ---
 
@@ -52,7 +52,7 @@ I left a suggestion pointing out the constructor/repository issue and why it wou
      what was confusing before, what made it make sense, and how you'd explain it to someone else.
      There are no wrong answers here. -->
 
-The Compose state model finally clicked. A text field doesn't store anything on its own — you keep the value in `var displayName by remember { mutableStateOf("") }`, and the field's `onValueChange` writes every keystroke back into that variable, which triggers recomposition and redraws the field with the new text. Before, I didn't understand why a field needed *both* a `value` and an `onValueChange`; now I see it's a loop (state drives the UI, the UI updates the state), and that `remember` is what stops the text from resetting to empty on every redraw.
+The Compose state loop finally clicked — a text field holds nothing on its own; you keep the value in `var x by remember { mutableStateOf("") }` and `onValueChange` writes each keystroke back, which triggers a recompose. That's why a field needs both a `value` and an `onValueChange`.
 
 ---
 
@@ -61,7 +61,7 @@ The Compose state model finally clicked. A text field doesn't store anything on 
 <!-- Be honest. This is the most useful part of the reflection for me — it tells me where to
      spend more time in class. You will not lose points for being confused. -->
 
-Where `UserRepository` is supposed to get created. If registration uses a ViewModel, do we instantiate the repository inside the ViewModel, or pass it into the constructor? And if it's a constructor parameter, how does `viewModel()` build the ViewModel when it's never handed a repository? Related to that, I'm not sure whether the confirm-password check belongs in the screen or the ViewModel — putting logic in the view feels wrong, but I don't yet know what the clean alternative is supposed to look like.
+Where `UserRepository` should get created — inside the ViewModel, or passed into its constructor (and if so, how does `viewModel()` build it?). I'm also unsure whether the confirm-password check belongs in the screen or the ViewModel.
 
 ---
 
@@ -70,7 +70,7 @@ Where `UserRepository` is supposed to get created. If registration uses a ViewMo
 <!-- Did you help a pod mate work through something? Did you discover something cool or frustrating?
      Did something from a previous week finally click? This is a good place to put it. -->
 
-The class question board hit a lot of the same walls our pod did this week — especially whether confirm-password (which is only a client-side check and never sent to the server) should be modeled the same as the fields that actually go into the create-user request. It would help to walk through the intended registration architecture in class.
+The class question board hit the same walls we did — mainly whether confirm-password (client-side only, never sent to the server) should be handled like the fields that actually go in the create-user request.
 
 ---
 
