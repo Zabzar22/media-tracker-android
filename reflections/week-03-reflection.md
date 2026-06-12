@@ -32,18 +32,19 @@
 <!-- Walk through the code you reviewed. What was the PR trying to do? Which files or
      functions did you focus on? -->
 
-I looked at their week-03 PR and compared their approach to mirroring the login flow into a register method against mine, since I built my version on my own while catching up rather than in class.
+I looked at Issa's and Samba's week-03 PRs — both built the register screen and sign-up logic, so I focused on where they put the registration code and how the fields connect to creating the account.
 
 ### What I Noticed
 
-<!-- Be specific. Name the thing you noticed and explain why it matters. A good, specific angle:
-     do their login and register screens duplicate the same field/state/button structure, or did
-     they pull the shared parts into one place? Duplication works now but means every future fix
-     has to be made twice. -->
+<!-- Be specific. Name the thing you noticed and explain why it matters. -->
+
+Our pod split two ways — Issa put registration in the shared `AuthViewModel`, Samba made a separate `RegisterViewModel`. Samba's `onSignUpClicked()` hardcodes `username`/`email`/`password` as `""` so accounts get made with blank info, and Issa's only checks email/password aren't blank with no password == confirmPassword match.
 
 ### Comments I Left
 
 <!-- Briefly summarize the comments you left on the PR. -->
+
+Told Samba to capture `username`/`email`/`password` like he does `displayName` instead of passing empty strings. Told Issa to add a `password == confirmPassword` check before marking it successful.
 
 ---
 
@@ -53,7 +54,7 @@ I looked at their week-03 PR and compared their approach to mirroring the login 
      what was confusing before, what made it make sense, and how you'd explain it to someone else.
      There are no wrong answers here. -->
 
-Because I missed class for a camping trip, I caught up by tracing the existing login flow line by line and mirroring it into a register method myself. Doing it without the lecture forced me to actually read the login code instead of following along, and that's when I understood that the register screen is really the *same shape* as login — the same field/state/button pattern, just with more fields and a different repository call. Rebuilding it from the login as a template is what made the structure stick.
+Since I missed class, I caught up by reading the login code and mirroring it into register — that's when it clicked that register is basically the same screen as login with more fields and a different repository call.
 
 ---
 
@@ -62,7 +63,7 @@ Because I missed class for a camping trip, I caught up by tracing the existing l
 <!-- Be honest. This is the most useful part of the reflection for me — it tells me where to
      spend more time in class. You will not lose points for being confused. -->
 
-Catching up without access to the recorded lecture was the hard part — I could see *what* changed in the code from the diffs, but not the *reasoning* the class talked through. I'm still not sure whether the way I mirrored login into register matches the approach the rest of the pod took, which I only started to find out later when comparing PRs.
+Catching up from just the code diffs was rough — I could see what changed but not the reasoning behind it, so I'm not sure my approach matches what the pod did in class.
 
 ---
 
@@ -71,7 +72,7 @@ Catching up without access to the recorded lecture was the hard part — I could
 <!-- Did you help a pod mate work through something? Did you discover something cool or frustrating?
      Did something from a previous week finally click? This is a good place to put it. -->
 
-If a student has to miss a class, is there any way to see what was covered so the catch-up is about understanding the reasoning and not just guessing from the code diff? That was my main friction this week.
+If someone misses a class, is there any way to see what was covered so catching up is about understanding it, not guessing from the diff?
 
 ---
 
