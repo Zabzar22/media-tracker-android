@@ -22,27 +22,27 @@
      Part 1 is the link — I will verify the review exists on GitHub.
      Part 2 is your written assessment — what you actually looked at and what you found. -->
 
-**Reviewed:** Issa Ali & Samba Kamara
-**Link to my review:** <!-- PASTE THE REAL LINK after you leave the review — this is verified on GitHub -->
+**Reviewed:** Issa Ali
+**Link to my review:** https://github.com/Issa-Ismail-Ali/media-tracker-android/pull/4#issuecomment-4686752985
 
 ### What I Looked At
 
 <!-- Walk through the code you reviewed. What was the PR trying to do? Which files or
      functions did you focus on? -->
 
-I looked at their week-04 register PR — mainly how they wired the fields to state and where they put the sign-up and password-matching logic.
+I looked at Issa's week-04 register PR — mainly where he put the sign-up logic and what he validates before letting registration go through.
 
 ### What I Noticed
 
 <!-- Be specific. Name the thing you noticed and explain why it matters. -->
 
-Their `RegisterViewModel` takes `UserRepository` as a constructor parameter but the screen builds it with `viewModel()` without passing it in, which crashes at runtime — it needs a no-arg constructor or a factory.
+Issa kept the auth logic in the `AuthViewModel`, but `onRegisterClick()` only checks that email and password aren't blank — there's no `password == confirmPassword` check, so someone could sign up with mismatched passwords and still get through.
 
 ### Comments I Left
 
 <!-- Briefly summarize the comments you left on the PR. -->
 
-Pointed out the constructor/repository crash and suggested just creating `UserRepository` inside the ViewModel for now.
+Suggested he add a `password == confirmPassword` check before allowing registration, since right now it only checks that email and password aren't blank.
 
 ---
 
@@ -52,7 +52,7 @@ Pointed out the constructor/repository crash and suggested just creating `UserRe
      what was confusing before, what made it make sense, and how you'd explain it to someone else.
      There are no wrong answers here. -->
 
-The Compose state loop finally clicked — a text field holds nothing on its own; you keep the value in `var x by remember { mutableStateOf("") }` and `onValueChange` writes each keystroke back, which triggers a recompose. That's why a field needs both a `value` and an `onValueChange`.
+The Compose state loop finally clicked for me, its like a text field holds nothing on its own; you keep the value in `var x by remember { mutableStateOf("") }` and `onValueChange` writes each keystroke back, which triggers a recompose.
 
 ---
 
@@ -61,7 +61,7 @@ The Compose state loop finally clicked — a text field holds nothing on its own
 <!-- Be honest. This is the most useful part of the reflection for me — it tells me where to
      spend more time in class. You will not lose points for being confused. -->
 
-Where `UserRepository` should get created — inside the ViewModel, or passed into its constructor (and if so, how does `viewModel()` build it?). I'm also unsure whether the confirm-password check belongs in the screen or the ViewModel.
+`UserRepository` where should it get created inside the ViewModel, or passed into its constructor and if so, how does `viewModel()` build it?. 
 
 ---
 
@@ -70,7 +70,7 @@ Where `UserRepository` should get created — inside the ViewModel, or passed in
 <!-- Did you help a pod mate work through something? Did you discover something cool or frustrating?
      Did something from a previous week finally click? This is a good place to put it. -->
 
-The class question board hit the same walls we did — mainly whether confirm-password (client-side only, never sent to the server) should be handled like the fields that actually go in the create-user request.
+They helped me catch up from last week, but it seems like some of the people don't know github well enough to format things correctly.
 
 ---
 
