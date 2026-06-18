@@ -44,5 +44,27 @@ class AuthViewModel : ViewModel() {
     }
 
     fun resetLoginState() { _loginState.value = AuthUiState.Idle }
+    // ── Register ──────────────────────────────────────────────────────────
+
+    private val _registerState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
+    val registerState: StateFlow<AuthUiState> = _registerState.asStateFlow()
+
+    fun onRegisterClick() {
+        viewModelScope.launch {
+            _registerState.value = AuthUiState.Loading
+            delay(800)
+
+            if (_email.value.isNotBlank() && _password.value.isNotBlank()) {
+                _registerState.value = AuthUiState.Success
+            } else {
+                _registerState.value =
+                    AuthUiState.Error(edu.metrostate.ics342.mediatracker.R.string.error_empty_credentials)
+            }
+        }
+    }
+
+    fun resetRegisterState() {
+        _registerState.value = AuthUiState.Idle
+    }
 
 }

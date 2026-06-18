@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 
@@ -27,7 +28,7 @@ fun MyProfileScreen(
     onSettingsClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
-    val user    by viewModel.currentUser.collectAsState()
+    val user    by viewModel.currentUser.collectAsStateWithLifecycle()
     val library by viewModel.libraryPreview.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
