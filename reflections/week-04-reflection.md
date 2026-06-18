@@ -42,7 +42,8 @@ Issa kept the auth logic in the `AuthViewModel`, but `onRegisterClick()` only ch
 
 <!-- Briefly summarize the comments you left on the PR. -->
 
-Suggested he add a `password == confirmPassword` check before allowing registration, since right now it only checks that email and password aren't blank.
+Suggested he add a `password == confirmPassword` check eventually before allowing registration, since right now it only checks that email and password aren't blank.
+I would asssume we will add this later in class
 
 ---
 
@@ -52,7 +53,7 @@ Suggested he add a `password == confirmPassword` check before allowing registrat
      what was confusing before, what made it make sense, and how you'd explain it to someone else.
      There are no wrong answers here. -->
 
-The Compose state loop finally clicked for me, its like a text field holds nothing on its own; you keep the value in `var x by remember { mutableStateOf("") }` and `onValueChange` writes each keystroke back, which triggers a recompose.
+The Compose state loop finally clicked for me, from my understanding its like a text field holds nothing on its own; you keep the value in `var x by remember { mutableStateOf("") }` and `onValueChange` writes each keystroke back, which triggers a recompose.
 
 ---
 
@@ -61,7 +62,8 @@ The Compose state loop finally clicked for me, its like a text field holds nothi
 <!-- Be honest. This is the most useful part of the reflection for me — it tells me where to
      spend more time in class. You will not lose points for being confused. -->
 
-`UserRepository` where should it get created inside the ViewModel, or passed into its constructor and if so, how does `viewModel()` build it?. 
+So `UserRepository` will get created inside the ViewModel, or passed into its constructor? and if so, how does `viewModel()` build it?
+Also, do are we only REQUIRED to do one complete code review for a specific pod mate? or for both, because one has had his repo on the wrong branch for multiple weeks, so I have been using Issa's one since it's always committed on time, and something I am able to do without looking back onto work from the previous week to get something completed that was technically supposed to be done in class...|
 
 ---
 
