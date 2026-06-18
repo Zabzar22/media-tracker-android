@@ -44,7 +44,7 @@ Where should `UserRepository` get created — inside the ViewModel, or passed in
 
 ## Anything Else
 
-They helped me catch up from last week, but it seems like some of the people don't know github well enough to format things correctly.
+They helped me catch up from last week, but it seems like some of the people don't know github well enough to format things correctly. That's also why I've reviewed Issa both weeks — my other pod mate's repo has been on the wrong branch without working pull requests, so his changes haven't really been reviewable on time. I did still leave comments on his commits, just not as my main review.
 
 ---
 
