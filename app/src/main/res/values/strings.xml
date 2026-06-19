@@ -94,6 +94,9 @@
     <string name="error_empty_credentials">Please enter your email and password.</string>
     <string name="error_empty_fields">Please fill in all fields.</string>
     <string name="error_passwords_mismatch">Passwords do not match.</string>
+    <string name="error_email_or_username_taken">That email or username is already taken.</string>
+    <string name="error_network">Network error. Check your connection and try again.</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
 
     <!-- Media -->
     <string name="media_unknown_author">Unknown Author</string>
