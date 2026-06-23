@@ -44,7 +44,7 @@ I don't really get how `@Serializable` actually works. I can add it to make thin
 
 ## Anything Else
 
-Most of my registration code followed the reference structure we were given, so I mostly matched that. The part I actually wrote myself was extending it to the login/token call, since the reference stopped at registration.
+Most of my registration code followed the reference structure we were given, so I mostly matched that. The part I tried to write myself was extending it to the login/token call, since the reference stopped at registration.
 
 ---
 
