@@ -72,6 +72,12 @@
     <string name="settings_change_password">Change password</string>
     <string name="settings_dark_mode">Dark mode</string>
 
+    <!-- Search -->
+    <string name="search_hint">Search books, movies, shows…</string>
+    <string name="search_popular_this_week">Popular This Week</string>
+    <string name="search_results_count">%1$d results</string>
+    <string name="search_showing_count">Showing %1$d of %2$d results</string>
+
     <!-- Stubs -->
     <string name="search_not_implemented">Search is not implemented yet.</string>
     <string name="detail_not_implemented">Media Detail is not implemented yet.\n(mediaId = %1$d)</string>

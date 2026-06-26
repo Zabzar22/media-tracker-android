@@ -5,6 +5,7 @@ object Routes {
     const val REGISTER      = "register"
     const val ACTIVITY_FEED = "activity_feed"
     const val SEARCH        = "search"
+    const val SEARCH_RESULTS = "search_results?query={query}"
     const val LIBRARY       = "library"
     const val CONNECTIONS   = "connections"
     const val MY_PROFILE    = "my_profile"

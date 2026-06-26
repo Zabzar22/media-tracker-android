@@ -37,6 +37,13 @@ fun LoginScreen(
             onLoginSuccess()
         }
     }
+    // DEV ONLY: auto-fill and sign in so we don't retype credentials every run.
+
+    LaunchedEffect(Unit) {
+        viewModel.onEmailChange("KenanTest@gmail.com")
+        viewModel.onPasswordChange("test123")
+        viewModel.onLoginClick()
+    }
 
     val isLoading = loginState is AuthViewModel.AuthUiState.Loading
     val errorMsg  = (loginState as? AuthViewModel.AuthUiState.Error)?.msgResId?.let { stringResource(it) }
