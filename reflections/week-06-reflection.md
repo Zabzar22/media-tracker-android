@@ -1,4 +1,4 @@
-# Week {{N}} Reflection
+# Week 06 Reflection
 
 **Name:** Kenan Port
 **Date:** 06-25-2026
@@ -7,59 +7,44 @@
 
 ## Commits This Week
 
-<!-- Paste a link to your commits for this week. The easiest way: go to your repo on GitHub,
-     click "commits", and copy the URL after filtering by your name or branch. -->
-
-**Link:**
+**Link:** https://github.com/Zabzar22/media-tracker-android/commits/week-06
 
 ---
 
 ## Code Review
 
-<!-- Every week you leave a review on a pod mate's pull request. Fill in both parts below.
-     Part 1 is the link — I will verify the review exists on GitHub.
-     Part 2 is your written assessment — what you actually looked at and what you found. -->
-
-**Reviewed:** *(pod mate's name)*
-**Link to my review:**
+**Reviewed:** Samba Kamara
+**Link to my review:** https://github.com/fascineh1/media-tracker-android/pull/2#issuecomment-4832846117
 
 ### What I Looked At
 
-<!-- Walk through the code you reviewed. What was the PR trying to do? Which files or
-     functions did you focus on? -->
+I looked at Samba's week-06 search PR; `SearchViewModel`, `SearchScreen`, and `UserApiService` mainly, since the task this week was to make the search screen pull real results from `GET /media` and page 20 at a time.
 
 ### What I Noticed
 
-<!-- Be specific. Did you spot a potential bug? A pattern that could cause problems? Something
-     done well that you want to call out? "I looked at the ViewModel and everything seemed fine"
-     is not specific enough. Name the thing you noticed and explain why it matters. -->
+His `SearchViewModel` returns four hard-coded items with no pagination from what I see, so it never loads results in pages of 20 and he built his own local `MediaItem(id, title, subtitle)` class instead of using the shared `Media` model. None of us actually have the live `GET /media` call wired yet (ours is still faked too), so I didn't focus on that; the two things that stood out as actual gaps were the missing pagination and the local model, since the JSON response maps to `Media`, not `MediaItem`, and that mismatch will bite him once the API is connected. The "Wire to GET /media" stub comment is also still in `SearchScreen`.
 
 ### Comments I Left
 
-<!-- Briefly summarize the comments you left on the PR. If you left a positive comment,
-     say what it was. If you left a suggestion, say what you suggested and why. -->
+Led with credit for landing `@Serializable` on the auth models, since that was what blocked him last week. Then noted, while being upfront that I wasn't 100% sure, that the `SearchViewModel` is still returning four hard-coded items so it isn't paging in 20s yet, and that his local `MediaItem` class might bite us once the API is wired since the response maps to the shared `Media` model — so it'd probably be worth switching over before we hook it up. Pointed out the "Wire to GET /media" stub comment is still in `SearchScreen` too, and framed the whole thing as us being in the same boat since none of us have the live call hooked up yet. Suggested we brainstorm the big-picture shape of this together rather than just dropping it into the code, so it makes sense to all of us, and closed on the fact that his PRs have gotten a lot easier to follow.
 
 ---
 
 ## One Thing I Understood More Deeply
 
-<!-- Be specific. Don't write "I learned about ViewModels." Write what specifically clicked —
-     what was confusing before, what made it make sense, and how you'd explain it to someone else.
-     There are no wrong answers here. -->
+The "load 20 at a time" behavior is really a small state machine, and the guard is what makes it work. In my `loadNextPage()` the `isLoadingMore` flag plus `loadedCount` are what keep a single scroll-to-bottom from dumping the entire list — it appends exactly one `drop(loadedCount).take(20)` slice and then flips the flag back. Before this week I thought pagination was mostly a UI thing (a spinner at the bottom); now I see the list, the loaded count, and the "is a page already in flight?" flag have to move together or you get duplicates or the whole list at once. When the real `GET /media` gets wired, the only part that changes is where the next slice comes from — instead of `drop/take` on a local list, the next page (and whether there even is one) comes back from the request.
 
----
+_---_
 
 ## One Thing I'm Still Confused About
 
-<!-- Be honest. This is the most useful part of the reflection for me — it tells me where to
-     spend more time in class. You will not lose points for being confused. -->
+Cursor-based paging on the real endpoint. The prof's branch doesn't use a page number or an offset — it sends `after` and reads the next cursor out of the `X-Next-Cursor` response header, with `X-Has-More` telling it whether to keep going. I get that an opaque cursor is more stable than an offset when the data changes, but I don't really understand how the server decides what the cursor is, or why it rides in a header instead of in the JSON body. Right now I'm faking all of this with a counter, so I haven't had to actually round-trip a cursor yet.
 
 ---
 
-## Anything Else *(optional)*
+## Anything Else
 
-<!-- Did you help a pod mate work through something? Did you discover something cool or frustrating?
-     Did something from a previous week finally click? This is a good place to put it. -->
+Worth being honest: my search is still running on `fakeSearchResults` with a `delay(500)` to fake the network because I couldn't tell if it was working or not; and so are both my pod mates' — the prof's branch is the one that actually deleted the fake data and moved to the live API. So this week was less "we hit the API" and more "we all built the search/paging UI and stubbed the data source." Issa got the closest — he actually defined a `searchMedia` endpoint and built real 20-at-a-time paging logic — but his `SearchViewModel` still reads from the fake list and never calls that endpoint, so it isn't wired either. I left him a comment about that.
 
 ---
 
