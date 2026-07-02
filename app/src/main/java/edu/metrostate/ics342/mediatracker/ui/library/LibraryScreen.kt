@@ -1,9 +1,9 @@
 package edu.metrostate.ics342.mediatracker.ui.library
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,7 +59,11 @@ fun LibraryScreen(
                     FilterChip(
                         selected = selectedType == key,
                         onClick  = { selectedType = key },
-                        label    = { Text(stringResource(labelRes)) }
+                        label    = { Text(stringResource(labelRes)) },
+                        colors   = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor     = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     )
                 }
         }
@@ -75,7 +79,11 @@ fun LibraryScreen(
                         index = index, count = LibraryStatus.values().size),
                     selected = selectedStatus == status,
                     onClick  = { viewModel.updateFilter(status) },
-                    label    = { Text(stringResource(status.labelRes)) }
+                    label    = { Text(stringResource(status.labelRes)) },
+                    colors   = SegmentedButtonDefaults.colors(
+                        activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        activeContentColor   = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 )
             }
         }

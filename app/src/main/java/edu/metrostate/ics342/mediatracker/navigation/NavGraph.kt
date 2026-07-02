@@ -76,8 +76,9 @@ fun MediaTrackerNavGraph(navController: NavHostController) {
 
             composable(Routes.ACTIVITY_FEED) {
                 ActivityFeedScreen(
-                    onMediaClick = { mediaId -> navController.navigate("media_detail/$mediaId") },
-                    onUserClick  = { userId  -> navController.navigate("user_profile/$userId") }
+                    onMediaClick   = { mediaId -> navController.navigate("media_detail/$mediaId") },
+                    onUserClick    = { userId  -> navController.navigate("user_profile/$userId") },
+                    onProfileClick = { navController.navigate(Routes.MY_PROFILE) }
                 )
             }
 

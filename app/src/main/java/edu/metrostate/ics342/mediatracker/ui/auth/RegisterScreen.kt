@@ -1,19 +1,23 @@
 package edu.metrostate.ics342.mediatracker.ui.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.SmartDisplay
+import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -59,26 +63,35 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector        = Icons.Filled.SmartDisplay,
-            contentDescription = null,
-            tint               = MaterialTheme.colorScheme.primary,
-            modifier           = Modifier.size(48.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector        = Icons.Outlined.SmartDisplay,
+                contentDescription = null,
+                tint               = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier           = Modifier.size(32.dp)
+            )
+        }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(16.dp))
 
         Text(
             stringResource(R.string.register_title),
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(Modifier.height(8.dp))
 
         Text(
             stringResource(R.string.register_tagline),
-            style     = MaterialTheme.typography.titleMedium,
+            style     = MaterialTheme.typography.bodyMedium,
             color     = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
@@ -201,8 +214,18 @@ fun RegisterScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        TextButton(onClick = onNavigateToLogin) {
-            Text(stringResource(R.string.login_prompt))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text  = stringResource(R.string.login_prompt),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            TextButton(
+                onClick = onNavigateToLogin,
+                contentPadding = PaddingValues(horizontal = 4.dp)
+            ) {
+                Text(stringResource(R.string.log_in_action))
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package edu.metrostate.ics342.mediatracker.ui.activity
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,27 +12,62 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import edu.metrostate.ics342.mediatracker.R
 import edu.metrostate.ics342.mediatracker.data.model.ActivityEvent
-import edu.metrostate.ics342.mediatracker.data.model.descriptionText
+import edu.metrostate.ics342.mediatracker.data.model.actionPhrase
+import edu.metrostate.ics342.mediatracker.data.model.creatorCredit
+import edu.metrostate.ics342.mediatracker.theme.avatarColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityFeedScreen(
     onMediaClick: (Int) -> Unit,
     onUserClick: (String) -> Unit,
+    onProfileClick: () -> Unit,
     viewModel: ActivityFeedViewModel = viewModel()
 ) {
     val feedItems by viewModel.feedItems.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.feed_title)) })
+        TopAppBar(
+            title = {
+                Text(
+                    stringResource(R.string.app_name),
+                    color      = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            actions = {
+                // Placeholder avatar for the logged-in user (fake data = Alex Chen).
+                Box(
+                    modifier = Modifier
+                        .padding(end = 12.dp)
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .clickable { onProfileClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text  = "A",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        )
 
         HorizontalDivider()
 
@@ -58,108 +94,158 @@ private fun ActivityCard(
     onMediaClick: () -> Unit,
     onUserClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    val name    = event.user?.displayName ?: stringResource(R.string.feed_user_someone)
+    val action  = event.actionPhrase(context)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable { onMediaClick() },
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         shape     = RoundedCornerShape(12.dp),
         colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Box(
+        Column(modifier = Modifier.padding(12.dp)) {
+
+            // Header — avatar + "Name action"
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .clickable { onUserClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (event.user?.avatarUrl != null) {
+                        AsyncImage(
+                            model              = event.user.avatarUrl,
+                            contentDescription = event.user.displayName,
+                            contentScale       = ContentScale.Crop,
+                            modifier           = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Surface(
+                            color    = avatarColor(event.user?.id ?: name),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    name.trim().take(1).uppercase().ifEmpty { "?" },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(name) }
+                        append(" ")
+                        append(action)
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Nested media box — colored cover tile + title / rating / credit
+            Row(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .clickable { onUserClick() },
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onMediaClick() }
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (event.user?.avatarUrl != null) {
-                    AsyncImage(
-                        model              = event.user.avatarUrl,
-                        contentDescription = event.user.displayName,
-                        contentScale       = ContentScale.Crop,
-                        modifier           = Modifier.fillMaxSize()
+                val containerColor = when (event.media?.mediaType) {
+                    "book"  -> MaterialTheme.colorScheme.primaryContainer
+                    "movie" -> MaterialTheme.colorScheme.secondaryContainer
+                    else    -> MaterialTheme.colorScheme.tertiaryContainer
+                }
+                val iconTint = when (event.media?.mediaType) {
+                    "book"  -> MaterialTheme.colorScheme.onPrimaryContainer
+                    "movie" -> MaterialTheme.colorScheme.onSecondaryContainer
+                    else    -> MaterialTheme.colorScheme.tertiary
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(width = 48.dp, height = 64.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(containerColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (event.media?.coverUrl != null) {
+                        AsyncImage(
+                            model              = event.media.coverUrl,
+                            contentDescription = event.media.title,
+                            contentScale       = ContentScale.Crop,
+                            modifier           = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(
+                                when (event.media?.mediaType) {
+                                    "book"  -> R.drawable.menu_book_24px
+                                    "movie" -> R.drawable.movie_24px
+                                    else    -> R.drawable.tv_24px
+                                }
+                            ),
+                            contentDescription = null,
+                            tint     = iconTint,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        event.media?.title ?: stringResource(R.string.feed_media_something),
+                        style      = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
                     )
-                } else {
-                    Surface(
-                        color    = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
+                    if (event.activityType == "review" && event.rating != null) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            "★".repeat(event.rating) + "☆".repeat(5 - event.rating),
+                            color = MaterialTheme.colorScheme.tertiary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (!event.reviewText.isNullOrBlank()) {
+                            Spacer(Modifier.height(2.dp))
                             Text(
-                                event.user?.displayName?.firstOrNull()?.toString() ?: "?",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                "\"${event.reviewText}\"",
+                                style    = MaterialTheme.typography.bodySmall,
+                                color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2
                             )
                         }
+                    } else if (event.media != null) {
+                        Text(
+                            event.media.creatorCredit(context),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
 
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.height(8.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(event.descriptionText(LocalContext.current),
-                    style      = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold)
-
-                if (event.activityType == "review" && event.rating != null) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "★".repeat(event.rating) + "☆".repeat(5 - event.rating),
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    if (!event.reviewText.isNullOrBlank()) {
-                        Spacer(Modifier.height(2.dp))
-                        Text(event.reviewText,
-                            style   = MaterialTheme.typography.bodySmall,
-                            color   = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 3)
-                    }
-                }
-
-                Spacer(Modifier.height(4.dp))
-                Text(event.createdAt.take(10),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline)
-            }
-
-            Spacer(Modifier.width(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(6.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (event.media?.coverUrl != null) {
-                    AsyncImage(
-                        model              = event.media.coverUrl,
-                        contentDescription = event.media.title,
-                        contentScale       = ContentScale.Crop,
-                        modifier           = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Surface(
-                        color    = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(when (event.media?.mediaType) {
-                                "book"  -> "📖"
-                                "movie" -> "🎬"
-                                "show"  -> "📺"
-                                else    -> "?"
-                            }, style = MaterialTheme.typography.titleMedium)
-                        }
-                    }
-                }
-            }
+            Text(
+                event.createdAt.take(10),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

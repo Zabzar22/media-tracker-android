@@ -20,8 +20,6 @@ import androidx.compose.ui.unit.dp
 import edu.metrostate.ics342.mediatracker.R
 import edu.metrostate.ics342.mediatracker.data.model.Media
 import edu.metrostate.ics342.mediatracker.data.model.creatorCredit
-import edu.metrostate.ics342.mediatracker.theme.MovieContainer
-import edu.metrostate.ics342.mediatracker.theme.OnMovieContainer
 
 @Composable
 fun MediaTypeFilterChips(
@@ -44,7 +42,11 @@ fun MediaTypeFilterChips(
             FilterChip(
                 selected = selectedType == type,
                 onClick = { onTypeSelect(type) },
-                label = { Text(stringResource(labelRes)) }
+                label = { Text(stringResource(labelRes)) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor     = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         }
     }
@@ -71,13 +73,13 @@ fun MediaResultCard(
         ) {
             val containerColor = when (media.mediaType) {
                 "book"  -> MaterialTheme.colorScheme.primaryContainer
-                "movie" -> MovieContainer
-                else    -> MaterialTheme.colorScheme.secondaryContainer
+                "movie" -> MaterialTheme.colorScheme.secondaryContainer
+                else    -> MaterialTheme.colorScheme.tertiaryContainer
             }
             val iconTint = when (media.mediaType) {
                 "book"  -> MaterialTheme.colorScheme.onPrimaryContainer
-                "movie" -> OnMovieContainer
-                else    -> MaterialTheme.colorScheme.secondary
+                "movie" -> MaterialTheme.colorScheme.onSecondaryContainer
+                else    -> MaterialTheme.colorScheme.tertiary
             }
 
             Box(
@@ -118,15 +120,27 @@ fun MediaResultCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    text = buildString {
-                        append("★ ${"%.1f".format(media.averageRating)}")
-                        append(" · ${media.mediaType.replaceFirstChar { it.uppercase() }}")
-                        media.publishedYear?.let { append(" · $it") }
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Only the star + rating gets the amber accent — and only when the
+                    // item actually has a rating (the live catalog is unrated so far).
+                    if (media.averageRating > 0f) {
+                        Text(
+                            text       = "★ ${"%.1f".format(media.averageRating)}",
+                            style      = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color      = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                    Text(
+                        text = buildString {
+                            if (media.averageRating > 0f) append(" · ")
+                            append(media.mediaType.replaceFirstChar { it.uppercase() })
+                            media.publishedYear?.let { append(" · $it") }
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

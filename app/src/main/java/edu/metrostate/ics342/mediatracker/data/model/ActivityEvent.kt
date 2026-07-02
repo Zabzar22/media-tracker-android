@@ -32,3 +32,13 @@ fun ActivityEvent.descriptionText(context: Context): String {
         else       -> context.getString(R.string.feed_event_unknown, name, title)
     }
 }
+
+/** Just the action part ("finished", "added to Want To", …) — the name is shown
+ *  separately (bold) and the media title lives in the card's media box. */
+fun ActivityEvent.actionPhrase(context: Context): String = when (activityType) {
+    "added"    -> context.getString(R.string.feed_header_added)
+    "started"  -> context.getString(R.string.feed_header_started)
+    "finished" -> context.getString(R.string.feed_header_finished)
+    "review"   -> context.getString(R.string.feed_header_reviewed)
+    else       -> context.getString(R.string.feed_header_updated)
+}

@@ -1,15 +1,21 @@
 package edu.metrostate.ics342.mediatracker.ui.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -37,14 +43,6 @@ fun LoginScreen(
             onLoginSuccess()
         }
     }
-    // DEV ONLY: auto-fill and sign in so we don't retype credentials every run.
-
-    LaunchedEffect(Unit) {
-        viewModel.onEmailChange("KenanTest@gmail.com")
-        viewModel.onPasswordChange("test123")
-        viewModel.onLoginClick()
-    }
-
     val isLoading = loginState is AuthViewModel.AuthUiState.Loading
     val errorMsg  = (loginState as? AuthViewModel.AuthUiState.Error)?.msgResId?.let { stringResource(it) }
 
@@ -55,8 +53,26 @@ fun LoginScreen(
         verticalArrangement   = Arrangement.Center,
         horizontalAlignment   = Alignment.CenterHorizontally
     ) {
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.SmartDisplay,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(32.dp)
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
         Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.app_name), style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary)
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface)
 
         Spacer(Modifier.height(8.dp))
 
@@ -126,8 +142,18 @@ fun LoginScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        TextButton(onClick = onNavigateToRegister) {
-            Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.register_prompt))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text  = stringResource(edu.metrostate.ics342.mediatracker.R.string.register_prompt),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            TextButton(
+                onClick = onNavigateToRegister,
+                contentPadding = PaddingValues(horizontal = 4.dp)
+            ) {
+                Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.sign_up_button))
+            }
         }
     }
 }

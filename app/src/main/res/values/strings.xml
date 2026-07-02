@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Media Tracker</string>
-    <string name="app_tagline">Track what you read, watch, and discover.</string>
+    <string name="app_tagline">Track what you love</string>
 
     <!-- Auth -->
     <string name="email_label">Email</string>
@@ -8,10 +8,11 @@
     <string name="display_name_label">Display Name</string>
     <string name="username_label">Username</string>
     <string name="confirm_password_label">Confirm Password</string>
-    <string name="sign_in_button">Sign In</string>
+    <string name="sign_in_button">Log In</string>
     <string name="sign_up_button">Sign Up</string>
-    <string name="register_prompt">Don\'t have an account? Register</string>
-    <string name="login_prompt">Already have an account? Log In</string>
+    <string name="register_prompt">Don\'t have an account?</string>
+    <string name="login_prompt">Already have an account?</string>
+    <string name="log_in_action">Log In</string>
     <string name="register_title">Create Account</string>
     <string name="register_tagline">Join the community</string>
     <string name="register_not_implemented">Create Account is not implemented yet.</string>
@@ -95,6 +96,13 @@
     <string name="feed_event_unknown">%1$s did something with %2$s</string>
     <string name="feed_user_someone">Someone</string>
     <string name="feed_media_something">something</string>
+
+    <!-- Activity Feed — header action phrases (name shown separately) -->
+    <string name="feed_header_added">added to Want To</string>
+    <string name="feed_header_started">started</string>
+    <string name="feed_header_finished">finished</string>
+    <string name="feed_header_reviewed">reviewed</string>
+    <string name="feed_header_updated">updated</string>
 
     <!-- Errors -->
     <string name="error_empty_credentials">Please enter your email and password.</string>
