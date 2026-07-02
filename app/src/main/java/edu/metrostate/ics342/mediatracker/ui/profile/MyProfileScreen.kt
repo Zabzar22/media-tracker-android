@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import edu.metrostate.ics342.mediatracker.ui.components.StatusBadge
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -155,9 +156,8 @@ fun MyProfileScreen(
                         Column {
                             Text(item.media.title, style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium)
-                            Text(stringResource(item.status.labelRes),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(4.dp))
+                            StatusBadge(status = item.status)
                         }
                     }
                 }

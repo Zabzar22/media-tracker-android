@@ -2,8 +2,6 @@ package edu.metrostate.ics342.mediatracker.ui.library
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +22,7 @@ import coil.compose.AsyncImage
 import edu.metrostate.ics342.mediatracker.data.model.LibraryItem
 import edu.metrostate.ics342.mediatracker.data.model.LibraryStatus
 import edu.metrostate.ics342.mediatracker.data.model.creatorCredit
+import edu.metrostate.ics342.mediatracker.ui.components.StatusBadge
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,38 +34,8 @@ fun LibraryScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val selectedStatus by viewModel.filterState.collectAsState()
 
-    var selectedType   by remember { mutableStateOf("all") }
-
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.library_title)) })
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf(
-                "all"   to edu.metrostate.ics342.mediatracker.R.string.filter_all,
-                "book"  to edu.metrostate.ics342.mediatracker.R.string.filter_books,
-                "movie" to edu.metrostate.ics342.mediatracker.R.string.filter_movies,
-                "show"  to edu.metrostate.ics342.mediatracker.R.string.filter_shows,
-                "comic" to edu.metrostate.ics342.mediatracker.R.string.filter_comics,
-                "album" to edu.metrostate.ics342.mediatracker.R.string.filter_albums
-            )
-                .forEach { (key, labelRes) ->
-                    FilterChip(
-                        selected = selectedType == key,
-                        onClick  = { selectedType = key },
-                        label    = { Text(stringResource(labelRes)) },
-                        colors   = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor     = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    )
-                }
-        }
 
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier
@@ -97,9 +66,7 @@ fun LibraryScreen(
             return@Column
         }
 
-        val filteredItems = items
-            .filter { it.status == selectedStatus }
-            .filter { selectedType == "all" || it.media.mediaType == selectedType }
+        val filteredItems = items.filter { it.status == selectedStatus }
 
         if (filteredItems.isEmpty()) {
             Box(
@@ -174,7 +141,7 @@ private fun LibraryItemCard(
     Card(
         modifier  = Modifier.fillMaxWidth().clickable { onClick() },
         shape     = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -213,10 +180,9 @@ private fun LibraryItemCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
-                SuggestionChip(
-                    onClick = { statusDialogVisible = true },
-                    label   = { Text(stringResource(item.status.labelRes),
-                        style = MaterialTheme.typography.labelSmall) }
+                StatusBadge(
+                    status  = item.status,
+                    onClick = { statusDialogVisible = true }
                 )
             }
 

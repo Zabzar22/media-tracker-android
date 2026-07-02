@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -104,7 +103,7 @@ private fun ActivityCard(
             .padding(horizontal = 16.dp, vertical = 6.dp),
         shape     = RoundedCornerShape(12.dp),
         colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
 
@@ -133,7 +132,7 @@ private fun ActivityCard(
                                 Text(
                                     name.trim().take(1).uppercase().ifEmpty { "?" },
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                             }
                         }

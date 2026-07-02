@@ -32,10 +32,14 @@ val OnSurfaceVariant = Color(0xFF64748B)
 val Outline         = Color(0xFFCBD5E1)
 val OutlineVariant  = Color(0xFFE8EDF2)
 
-// Saturated accent colors from the wireframe design system (want-to / in-progress / finished).
-val WantTo     = Color(0xFF7C3AED)
-val InProgress = Color(0xFF2563EB)
-val Finished   = Color(0xFF059669)
+// Status accent colors from the wireframe design system (want-to / in-progress / finished).
+// Each has a light container for the badge background and the saturated color for its text.
+val WantTo              = Color(0xFF7C3AED)
+val WantToContainer     = Color(0xFFEDE9FE)
+val InProgress          = Color(0xFF2563EB)
+val InProgressContainer = Color(0xFFDBEAFE)
+val Finished            = Color(0xFF059669)
+val FinishedContainer   = Color(0xFFD1FAE5)
 
 // Avatar palette — the darker/saturated brand colors. Each user gets a stable color
 // from this set (all take white text).
