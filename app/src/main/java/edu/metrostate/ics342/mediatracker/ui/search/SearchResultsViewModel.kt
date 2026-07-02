@@ -1,5 +1,6 @@
 package edu.metrostate.ics342.mediatracker.ui.search
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.metrostate.ics342.mediatracker.data.model.Media
@@ -67,8 +68,9 @@ class SearchResultsViewModel : ViewModel() {
                 nextCursor      = page.nextCursor
                 hasMore         = page.hasMore
             } catch (e: Exception) {
-                // Network/parse error: leave what we have and stop this page. The next
+                // Network/parse error: log it and stop this page. The next
                 // scroll-to-bottom will try again.
+                Log.w("Search", "loadNextPage failed", e)
             } finally {
                 _isLoading.value = false
             }
