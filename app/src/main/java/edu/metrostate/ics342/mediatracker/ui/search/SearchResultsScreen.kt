@@ -2,7 +2,7 @@ package edu.metrostate.ics342.mediatracker.ui.search
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,9 +29,7 @@ fun SearchResultsScreen(
     var searchBarQuery by remember { mutableStateOf(initialQuery) }
     val results by viewModel.results.collectAsState()
     val selectedType by viewModel.selectedType.collectAsState()
-    val totalCount by viewModel.totalCount.collectAsState()
-    val canLoadMore by viewModel.canLoadMore.collectAsState()
-    val isLoadingMore by viewModel.isLoadingMore.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     val listState = rememberLazyListState()
 
@@ -39,17 +37,17 @@ fun SearchResultsScreen(
         viewModel.search(initialQuery)
     }
 
-    // Load the next page once the user scrolls near the bottom of the list.
-    val shouldLoadMore by remember {
+    // Ask for the next page once the user scrolls within 5 items of the end. The
+    // ViewModel's own guards decide whether there's actually another page to fetch.
+    val reachedBottom by remember {
         derivedStateOf {
-            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= results.size - 5
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            val total = listState.layoutInfo.totalItemsCount
+            total > 0 && lastVisible >= total - 5
         }
     }
-    LaunchedEffect(shouldLoadMore, canLoadMore, isLoadingMore) {
-        if (shouldLoadMore && canLoadMore && !isLoadingMore) {
-            viewModel.loadNextPage()
-        }
+    LaunchedEffect(reachedBottom) {
+        if (reachedBottom) viewModel.loadNextPage()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -86,25 +84,24 @@ fun SearchResultsScreen(
         )
 
         Text(
-            text = stringResource(R.string.search_showing_count, results.size, totalCount),
+            text = stringResource(R.string.search_results_count, results.size),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        // Paginated list: 20 per page, appending the next page as we near the bottom.
+        // Real GET /media results: ids are unique, so key by id.
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize()
         ) {
-            // fakeSearchResults repeats ids, so key by position to avoid duplicate-key crashes.
-            itemsIndexed(results) { _, media ->
+            items(results, key = { it.id }) { media ->
                 MediaResultCard(
                     media = media,
                     onClick = { onMediaClick(media.id) }
                 )
             }
-            if (isLoadingMore) {
+            if (isLoading) {
                 item {
                     Box(
                         modifier = Modifier
