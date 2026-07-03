@@ -3,6 +3,7 @@ package edu.metrostate.ics342.mediatracker.data.network
 import edu.metrostate.ics342.mediatracker.data.model.Media
 import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface MediaApiService {
@@ -16,4 +17,9 @@ interface MediaApiService {
         @Query("limit") limit: Int = 20,
         @Query("after") after: String? = null
     ): Response<List<Media>>
+
+    // GET /media/{id} — full details for one item (used by the detail screen).
+    // Returns the media object directly (not paginated); 404 if the id doesn't exist.
+    @GET("media/{id}")
+    suspend fun getMediaById(@Path("id") id: Int): Response<Media>
 }

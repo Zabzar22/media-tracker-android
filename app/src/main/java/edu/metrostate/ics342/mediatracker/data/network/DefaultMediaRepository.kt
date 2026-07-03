@@ -24,4 +24,10 @@ class DefaultMediaRepository(
         val hasMore    = response.headers()["X-Has-More"] == "true"
         return MediaPage(items, nextCursor, hasMore)
     }
+
+    // Full details for one item. Returns null on 404 (unknown id) or any non-2xx.
+    suspend fun getMedia(id: Int): Media? {
+        val response = api.getMediaById(id)
+        return if (response.isSuccessful) response.body() else null
+    }
 }

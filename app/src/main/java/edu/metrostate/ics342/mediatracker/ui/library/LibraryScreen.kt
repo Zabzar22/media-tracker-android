@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -161,10 +162,16 @@ private fun LibraryItemCard(
                     Surface(color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier.fillMaxSize()) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(when (item.media.mediaType) {
-                                "book" -> "📖"; "movie" -> "🎬"; "show" -> "📺"
-                                else -> "?"
-                            }, style = MaterialTheme.typography.titleLarge)
+                            Icon(
+                                painter = painterResource(when (item.media.mediaType) {
+                                    "book"  -> edu.metrostate.ics342.mediatracker.R.drawable.menu_book_24px
+                                    "movie" -> edu.metrostate.ics342.mediatracker.R.drawable.movie_24px
+                                    else    -> edu.metrostate.ics342.mediatracker.R.drawable.tv_24px
+                                }),
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
