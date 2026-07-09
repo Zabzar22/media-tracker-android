@@ -132,16 +132,16 @@ object FakeMediaRepository {
 
     val activityFeed = listOf(
         ActivityEvent(1, "user-002", "finished", 5, createdAt = "2024-01-22T14:30:00Z",
-            user = userJordan, media = mediaList[4]),
+            timeAgo = "2 hours ago", user = userJordan, media = mediaList[4]),
         ActivityEvent(2, "user-003", "review",   8, rating = 5,
             reviewText = "Absolutely gripping from start to finish.",
-            createdAt = "2024-01-22T11:15:00Z", user = userPriya, media = mediaList[7]),
+            createdAt = "2024-01-22T11:15:00Z", timeAgo = "5 hours ago", user = userPriya, media = mediaList[7]),
         ActivityEvent(3, "user-004", "added",    10, createdAt = "2024-01-21T20:00:00Z",
-            user = userMarco, media = mediaList[9]),
+            timeAgo = "8 hours ago", user = userMarco, media = mediaList[9]),
         ActivityEvent(4, "user-002", "started",  9, createdAt = "2024-01-21T18:45:00Z",
-            user = userJordan, media = mediaList[8]),
+            timeAgo = "1 day ago", user = userJordan, media = mediaList[8]),
         ActivityEvent(5, "user-003", "review",   1, rating = 4,
-            createdAt = "2024-01-20T09:00:00Z", user = userPriya, media = mediaList[0]),
+            createdAt = "2024-01-20T09:00:00Z", timeAgo = "2 days ago", user = userPriya, media = mediaList[0]),
     )
 
     val followers = listOf(userJordan, userPriya)

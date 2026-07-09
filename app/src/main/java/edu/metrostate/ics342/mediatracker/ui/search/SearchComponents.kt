@@ -43,7 +43,9 @@ fun MediaTypeFilterChips(
                 selected = selectedType == type,
                 onClick = { onTypeSelect(type) },
                 label = { Text(stringResource(labelRes)) },
+                shape = RoundedCornerShape(8.dp),
                 colors = FilterChipDefaults.filterChipColors(
+                    containerColor         = MaterialTheme.colorScheme.surface,
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                     selectedLabelColor     = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -107,7 +109,6 @@ fun MediaResultCard(
                 Text(
                     text = media.title,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -126,9 +127,8 @@ fun MediaResultCard(
                     if (media.averageRating > 0f) {
                         Text(
                             text       = "★ ${"%.1f".format(media.averageRating)}",
-                            style      = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color      = MaterialTheme.colorScheme.tertiary
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                     }
                     Text(
@@ -137,7 +137,7 @@ fun MediaResultCard(
                             append(media.mediaType.replaceFirstChar { it.uppercase() })
                             media.publishedYear?.let { append(" · $it") }
                         },
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

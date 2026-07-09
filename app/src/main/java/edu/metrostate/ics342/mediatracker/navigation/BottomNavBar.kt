@@ -64,7 +64,11 @@ fun BottomNavBar(navController: NavController) {
         tonalElevation = 0.dp
     ) {
         bottomNavItems.forEach { item ->
-            val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+            val currentRoute = currentDestination?.route
+            // Keep the Search tab highlighted on the search-results screen too — it's still
+            // the Search section, just a sibling route the hierarchy check wouldn't catch.
+            val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true ||
+                (item.route == Routes.SEARCH && currentRoute == Routes.SEARCH_RESULTS)
 
             NavigationBarItem(
                 selected = isSelected,

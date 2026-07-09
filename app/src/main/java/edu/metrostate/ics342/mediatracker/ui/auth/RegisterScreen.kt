@@ -83,7 +83,6 @@ fun RegisterScreen(
         Text(
             stringResource(R.string.register_title),
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -103,6 +102,31 @@ fun RegisterScreen(
             onValueChange = viewModel::onDisplayNameChange,
             label         = { Text(stringResource(R.string.display_name_label)) },
             singleLine    = true,
+            shape  = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            ),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction    = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value         = username,
+            onValueChange = viewModel::onUsernameChange,
+            label         = { Text(stringResource(R.string.username_label)) },
+            singleLine    = true,
+            shape  = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            ),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Text,
                 imeAction    = ImeAction.Next
@@ -120,25 +144,12 @@ fun RegisterScreen(
             onValueChange = viewModel::onEmailChange,
             label         = { Text(stringResource(R.string.email_label)) },
             singleLine    = true,
+            shape  = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            ),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
-                imeAction    = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value         = username,
-            onValueChange = viewModel::onUsernameChange,
-            label         = { Text(stringResource(R.string.username_label)) },
-            singleLine    = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text,
                 imeAction    = ImeAction.Next
             ),
             keyboardActions = KeyboardActions(
@@ -155,6 +166,10 @@ fun RegisterScreen(
             label                = { Text(stringResource(R.string.password_label)) },
             singleLine           = true,
             visualTransformation = PasswordVisualTransformation(),
+            shape  = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            ),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
                 imeAction    = ImeAction.Next
@@ -173,6 +188,10 @@ fun RegisterScreen(
             label                = { Text(stringResource(R.string.confirm_password_label)) },
             singleLine           = true,
             visualTransformation = PasswordVisualTransformation(),
+            shape  = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            ),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
                 imeAction    = ImeAction.Done
@@ -197,6 +216,7 @@ fun RegisterScreen(
         Button(
             onClick  = { focusManager.clearFocus(); viewModel.onRegisterClick() },
             enabled  = !isLoading,
+            shape    = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)

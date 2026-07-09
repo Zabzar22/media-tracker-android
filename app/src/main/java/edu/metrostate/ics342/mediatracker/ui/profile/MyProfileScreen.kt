@@ -87,8 +87,7 @@ fun MyProfileScreen(
             }
 
             Spacer(Modifier.height(12.dp))
-            Text(u.displayName, style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold)
+            Text(u.displayName, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(2.dp))
             Text("@${u.username}", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -115,7 +114,8 @@ fun MyProfileScreen(
 
             OutlinedButton(
                 onClick  = onEditProfile,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape    = RoundedCornerShape(20.dp)
             ) { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.profile_edit_button)) }
 
             Spacer(Modifier.height(24.dp))
@@ -161,8 +161,7 @@ fun MyProfileScreen(
                         }
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text(item.media.title, style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium)
+                            Text(item.media.title, style = MaterialTheme.typography.titleSmall)
                             Spacer(Modifier.height(4.dp))
                             StatusBadge(status = item.status)
                         }
@@ -176,7 +175,7 @@ fun MyProfileScreen(
 @Composable
 private fun StatItem(value: String, labelRes: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(value, style = MaterialTheme.typography.titleLarge)
         Text(stringResource(labelRes), style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

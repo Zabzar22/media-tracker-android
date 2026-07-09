@@ -71,7 +71,6 @@ fun LoginScreen(
         Spacer(Modifier.height(16.dp))
 
         Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.app_name), style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface)
 
         Spacer(Modifier.height(8.dp))
@@ -87,6 +86,10 @@ fun LoginScreen(
             value         = email,
             onValueChange = viewModel::onEmailChange,
             label         = { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.email_label)) },
+            shape  = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            ),
             singleLine    = true,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
@@ -104,6 +107,10 @@ fun LoginScreen(
             value         = password,
             onValueChange = viewModel::onPasswordChange,
             label         = { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.password_label)) },
+            shape  = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            ),
             singleLine    = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(
@@ -127,6 +134,7 @@ fun LoginScreen(
         Button(
             onClick  = { focusManager.clearFocus(); viewModel.onLoginClick() },
             enabled  = !isLoading,
+            shape    = RoundedCornerShape(20.dp),
             modifier = Modifier.fillMaxWidth().height(48.dp)
         ) {
             if (isLoading) {

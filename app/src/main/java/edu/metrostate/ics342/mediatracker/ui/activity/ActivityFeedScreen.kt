@@ -28,6 +28,7 @@ import edu.metrostate.ics342.mediatracker.data.model.ActivityEvent
 import edu.metrostate.ics342.mediatracker.data.model.actionPhrase
 import edu.metrostate.ics342.mediatracker.data.model.creatorCredit
 import edu.metrostate.ics342.mediatracker.theme.avatarColor
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,39 +41,46 @@ fun ActivityFeedScreen(
     val feedItems by viewModel.feedItems.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = {
+        // Compact grey header (surfaceVariant = the same tint behind the feed's book/movie
+        // tiles). statusBarsPadding keeps the content clear of the status bar while the grey
+        // fills behind it; the small vertical padding makes it a touch shorter than a TopAppBar.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.weight(1f))
+            // Placeholder avatar for the logged-in user (fake data = Alex Chen).
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+                    .clickable { onProfileClick() },
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
-                    stringResource(R.string.app_name),
-                    color      = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    text  = "A",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
-            },
-            actions = {
-                // Placeholder avatar for the logged-in user (fake data = Alex Chen).
-                Box(
-                    modifier = Modifier
-                        .padding(end = 12.dp)
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .clickable { onProfileClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text  = "A",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
             }
-        )
+        }
 
         HorizontalDivider()
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface)
                 .verticalScroll(rememberScrollState())
                 .padding(vertical = 8.dp)
         ) {
@@ -143,7 +151,7 @@ private fun ActivityCard(
 
                 Text(
                     text = buildAnnotatedString {
-                        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(name) }
+                        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(name.substringBefore(" ")) }
                         append(" ")
                         append(action)
                     },
@@ -209,8 +217,7 @@ private fun ActivityCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         event.media?.title ?: stringResource(R.string.feed_media_something),
-                        style      = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        style = MaterialTheme.typography.titleSmall
                     )
                     if (event.activityType == "review" && event.rating != null) {
                         Spacer(Modifier.height(2.dp))
@@ -228,6 +235,15 @@ private fun ActivityCard(
                                 maxLines = 2
                             )
                         }
+                    } else if (event.activityType == "finished" && event.media != null) {
+                        // Finished items show the title's rating stars too — not just reviews.
+                        val stars = event.media.averageRating.roundToInt().coerceIn(0, 5)
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            "★".repeat(stars) + "☆".repeat(5 - stars),
+                            color = MaterialTheme.colorScheme.tertiary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     } else if (event.media != null) {
                         Text(
                             event.media.creatorCredit(context),
@@ -241,8 +257,8 @@ private fun ActivityCard(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                event.createdAt.take(10),
-                style = MaterialTheme.typography.labelSmall,
+                event.timeAgo ?: event.createdAt.take(10),
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

@@ -1,15 +1,18 @@
 package edu.metrostate.ics342.mediatracker.ui.library
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -29,14 +32,34 @@ import edu.metrostate.ics342.mediatracker.ui.components.StatusBadge
 @Composable
 fun LibraryScreen(
     onMediaClick: (Int) -> Unit,
+    onAddClick: () -> Unit,
     viewModel: LibraryViewModel = viewModel()
 ) {
     val items     by viewModel.libraryItems.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val selectedStatus by viewModel.filterState.collectAsState()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.library_title)) })
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        TopAppBar(
+            title = { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.library_title)) },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background
+            ),
+            actions = {
+                FilledTonalButton(
+                    onClick = onAddClick,
+                    modifier = Modifier.padding(end = 8.dp).height(36.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor   = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
+                ) {
+                    Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.library_add))
+                }
+            }
+        )
 
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier
@@ -50,6 +73,7 @@ fun LibraryScreen(
                     selected = selectedStatus == status,
                     onClick  = { viewModel.updateFilter(status) },
                     label    = { Text(stringResource(status.labelRes)) },
+                    icon     = {},
                     colors   = SegmentedButtonDefaults.colors(
                         activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
                         activeContentColor   = MaterialTheme.colorScheme.onPrimaryContainer
@@ -142,6 +166,7 @@ private fun LibraryItemCard(
     Card(
         modifier  = Modifier.fillMaxWidth().clickable { onClick() },
         shape     = RoundedCornerShape(12.dp),
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -159,7 +184,19 @@ private fun LibraryItemCard(
                         modifier          = Modifier.fillMaxSize()
                     )
                 } else {
-                    Surface(color = MaterialTheme.colorScheme.surfaceVariant,
+                    // Colored cover tile per media type — matches the feed/search cards and
+                    // the wireframe (book = indigo, movie = pink, show = amber).
+                    val coverColor = when (item.media.mediaType) {
+                        "book"  -> MaterialTheme.colorScheme.primaryContainer
+                        "movie" -> MaterialTheme.colorScheme.secondaryContainer
+                        else    -> MaterialTheme.colorScheme.tertiaryContainer
+                    }
+                    val iconTint = when (item.media.mediaType) {
+                        "book"  -> MaterialTheme.colorScheme.onPrimaryContainer
+                        "movie" -> MaterialTheme.colorScheme.onSecondaryContainer
+                        else    -> MaterialTheme.colorScheme.tertiary
+                    }
+                    Surface(color = coverColor,
                         modifier = Modifier.fillMaxSize()) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -170,7 +207,7 @@ private fun LibraryItemCard(
                                 }),
                                 contentDescription = null,
                                 modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = iconTint
                             )
                         }
                     }
@@ -181,7 +218,7 @@ private fun LibraryItemCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.media.title, style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold, maxLines = 2)
+                    maxLines = 2)
                 Spacer(Modifier.height(2.dp))
                 Text(item.media.creatorCredit(LocalContext.current),
                     style = MaterialTheme.typography.bodySmall,

@@ -17,6 +17,9 @@ data class ActivityEvent(
     val rating: Int? = null,
     val reviewText: String? = null,
     val createdAt: String,
+    // Mock-friendly relative label ("2 hours ago"). Null when we're on the real API,
+    // where the feed falls back to formatting createdAt instead.
+    val timeAgo: String? = null,
     val user: UserProfile? = null,
     val media: Media? = null
 )
@@ -38,7 +41,10 @@ fun ActivityEvent.descriptionText(context: Context): String {
 fun ActivityEvent.actionPhrase(context: Context): String = when (activityType) {
     "added"    -> context.getString(R.string.feed_header_added)
     "started"  -> context.getString(R.string.feed_header_started)
-    "finished" -> context.getString(R.string.feed_header_finished)
+    "finished" -> when (media?.mediaType) {
+        "book" -> context.getString(R.string.feed_header_finished_reading)
+        else   -> context.getString(R.string.feed_header_finished_watching)
+    }
     "review"   -> context.getString(R.string.feed_header_reviewed)
     else       -> context.getString(R.string.feed_header_updated)
 }

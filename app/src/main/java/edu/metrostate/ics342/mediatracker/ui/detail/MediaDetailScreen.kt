@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.StarBorder
@@ -86,7 +87,7 @@ fun MediaDetailScreen(
 
             Spacer(Modifier.height(16.dp))
             Text(media.title, style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                textAlign = TextAlign.Center)
             Spacer(Modifier.height(4.dp))
             Text(media.creatorCredit(LocalContext.current),
                 style = MaterialTheme.typography.bodyLarge,
@@ -98,8 +99,7 @@ fun MediaDetailScreen(
                 StarRow(media.averageRating)
                 Spacer(Modifier.width(6.dp))
                 Text("%.1f".format(media.averageRating),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.tertiary)
                 Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.detail_rating_count,
@@ -112,11 +112,13 @@ fun MediaDetailScreen(
             Spacer(Modifier.height(20.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(onClick = { /* Week 9: POST /library want_to */ },
-                    modifier = Modifier.weight(1f)) {
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(20.dp)) {
                     Text(stringResource(R.string.detail_want_to))
                 }
                 OutlinedButton(onClick = { /* Week 9: save */ },
-                    modifier = Modifier.weight(1f)) {
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(20.dp)) {
                     Icon(Icons.Outlined.FavoriteBorder, contentDescription = null,
                         modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
@@ -154,8 +156,7 @@ fun MediaDetailScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.detail_reviews, reviews.size),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.titleMedium)
                 TextButton(onClick = { onWriteReview(mediaId) }) {
                     Text(stringResource(R.string.detail_write_review))
                 }
@@ -201,15 +202,19 @@ private fun CoverArt(media: Media) {
 /** Row of five amber stars. A star fills at .6 and above (4.6 -> 5, 4.5/4.4 -> 4). */
 @Composable
 private fun StarRow(rating: Float) {
-    // Work in whole tenths first so float rounding (4.6 is really 4.5999…) can't
-    // knock a rating down a star. Then fill the next star only when the tenths
-    // digit is 6 or higher.
-    val tenths = (rating * 10).roundToInt()
-    val filled = (tenths / 10 + if (tenths % 10 >= 6) 1 else 0).coerceIn(0, 5)
+    // Round to the nearest half-star so 4.5 shows four full stars + one half,
+    // instead of being floored to four. Working in half-steps (0..10) also absorbs
+    // float noise like 4.4999. Each position is full, half, or empty.
+    val halves = (rating * 2).roundToInt().coerceIn(0, 10)
     Row {
         for (index in 0 until 5) {
+            val star = when {
+                halves >= (index + 1) * 2 -> Icons.Filled.Star          // full star
+                halves >= index * 2 + 1   -> Icons.Filled.StarHalf      // half star
+                else                      -> Icons.Outlined.StarBorder  // empty star
+            }
             Icon(
-                imageVector = if (index < filled) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                imageVector = star,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.size(16.dp)
@@ -241,8 +246,7 @@ private fun StatBox(label: String, value: String, modifier: Modifier = Modifier)
             Text(label.uppercase(), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
             Spacer(Modifier.height(4.dp))
-            Text(value, style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold)
+            Text(value, style = MaterialTheme.typography.titleMedium)
         }
     }
 }
@@ -273,8 +277,7 @@ private fun ReviewCard(review: Review) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically) {
                     Text("@${review.user?.username ?: "user"}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.titleSmall)
                     Text(review.createdAt, style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

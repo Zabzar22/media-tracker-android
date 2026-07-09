@@ -28,7 +28,8 @@
     <string name="feed_title">Feed</string>
 
     <!-- Library -->
-    <string name="library_title">Library</string>
+    <string name="library_title">My Library</string>
+    <string name="library_add">+Add</string>
     <string name="filter_all">All</string>
     <string name="filter_books">Books</string>
     <string name="filter_movies">Movies</string>
@@ -101,6 +102,8 @@
     <string name="feed_header_added">added to Want To</string>
     <string name="feed_header_started">started</string>
     <string name="feed_header_finished">finished</string>
+    <string name="feed_header_finished_reading">finished reading</string>
+    <string name="feed_header_finished_watching">finished watching</string>
     <string name="feed_header_reviewed">reviewed</string>
     <string name="feed_header_updated">updated</string>
 
