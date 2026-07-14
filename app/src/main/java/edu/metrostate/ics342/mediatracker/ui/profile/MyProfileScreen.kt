@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import edu.metrostate.ics342.mediatracker.data.model.iconRes
 import edu.metrostate.ics342.mediatracker.ui.components.StatusBadge
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,11 +148,7 @@ fun MyProfileScreen(
                                 modifier = Modifier.fillMaxSize()) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        painter = painterResource(when (item.media.mediaType) {
-                                            "book"  -> edu.metrostate.ics342.mediatracker.R.drawable.menu_book_24px
-                                            "movie" -> edu.metrostate.ics342.mediatracker.R.drawable.movie_24px
-                                            else    -> edu.metrostate.ics342.mediatracker.R.drawable.tv_24px
-                                        }),
+                                        painter = painterResource(item.media.mediaType.iconRes()),
                                         contentDescription = null,
                                         modifier = Modifier.size(20.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant

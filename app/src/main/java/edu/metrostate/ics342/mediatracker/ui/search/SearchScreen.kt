@@ -32,8 +32,10 @@ fun SearchScreen(
     val query by viewModel.query.collectAsState()
     val selectedType by viewModel.selectedType.collectAsState()
 
+    // The chips still hand back a plain String ("book"/"movie"/"show"), which is also what
+    // GET /media wants for its `type` param, so compare against the enum's apiString.
     val popularItems = FakeMediaRepository.mediaList.filter { media ->
-        selectedType.isEmpty() || media.mediaType == selectedType
+        selectedType.isEmpty() || media.mediaType.apiString == selectedType
     }
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {

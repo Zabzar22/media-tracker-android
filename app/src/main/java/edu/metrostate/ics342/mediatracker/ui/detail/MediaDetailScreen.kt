@@ -26,29 +26,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import kotlin.math.roundToInt
 import edu.metrostate.ics342.mediatracker.R
-import edu.metrostate.ics342.mediatracker.data.FakeMediaRepository
+import edu.metrostate.ics342.mediatracker.data.model.LibraryStatus
 import edu.metrostate.ics342.mediatracker.data.model.Media
 import edu.metrostate.ics342.mediatracker.data.model.Review
 import edu.metrostate.ics342.mediatracker.data.model.UserProfile
 import edu.metrostate.ics342.mediatracker.data.model.creatorCredit
+import edu.metrostate.ics342.mediatracker.data.model.iconRes
 import edu.metrostate.ics342.mediatracker.data.model.typeStat
 
-// Week 7: Media Detail layout. No network yet — one item looked up from the fake
-// repository by mediaId. GET /media/{id} and GET /reviews come in a later week.
+// Week 8 - hooked this up to the real API. The view model fetches the item, its library
+// status and its reviews instead of reading the fake repo. I kept the top bar outside the
+// when() so the back button still works while it's loading / erroring.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaDetailScreen(
     mediaId: Int,
     onNavigateBack: () -> Unit,
-    onWriteReview: (Int) -> Unit
+    onWriteReview: (Int) -> Unit,
+    viewModel: MediaDetailViewModel = viewModel()
 ) {
-    val media = remember(mediaId) { FakeMediaRepository.mediaList.find { it.id == mediaId } }
+    val uiState by viewModel.uiState.collectAsState()
 
-    // A couple of fake reviews so the list has something to show tonight.
-    val reviews = remember(mediaId) { sampleReviews(mediaId) }
+    // Only want to load once when the screen opens (or if the id changes). Putting the
+    // call in LaunchedEffect instead of straight in the body stops it from re-running
+    // GET /media/{id} on every recomposition, which was making it loop.
+    LaunchedEffect(mediaId) { viewModel.load(mediaId) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -67,102 +73,161 @@ fun MediaDetailScreen(
             }
         )
 
-        if (media == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.detail_not_found),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            return@Column
+        when (val state = uiState) {
+            is MediaDetailUiState.Loading ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+
+            // No such id — nothing to retry, so this one just explains itself.
+            is MediaDetailUiState.NotFound ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.detail_not_found),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
+            is MediaDetailUiState.Error ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // Show what the server said if it said anything useful; my own
+                        // wording covers the cases where it didn't (e.g. no connection).
+                        Text(state.message.ifBlank { stringResource(R.string.detail_error) },
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(12.dp))
+                        Button(onClick = { viewModel.load(mediaId) }) {
+                            Text(stringResource(R.string.action_retry))
+                        }
+                    }
+                }
+
+            is MediaDetailUiState.Success ->
+                MediaDetailContent(
+                    media = state.media,
+                    mediaId = mediaId,
+                    libraryStatus = state.libraryStatus,
+                    reviews = state.reviews,
+                    isUpdatingLibrary = state.isUpdatingLibrary,
+                    onAddToLibrary = { viewModel.addToWantTo(mediaId) },
+                    onWriteReview = onWriteReview
+                )
+        }
+    }
+}
+
+// Pulled the whole success layout out into its own composable so the when() branch
+// above stays readable. It's the same layout from Week 7, just given the real Media now.
+@Composable
+private fun MediaDetailContent(
+    media: Media,
+    mediaId: Int,
+    libraryStatus: LibraryStatus?,
+    reviews: List<Review>,
+    isUpdatingLibrary: Boolean,
+    onAddToLibrary: () -> Unit,
+    onWriteReview: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Cover — placeholder icon box unless a real coverUrl exists.
+        CoverArt(media)
+
+        Spacer(Modifier.height(16.dp))
+        Text(media.title, style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center)
+        Spacer(Modifier.height(4.dp))
+        Text(media.creatorCredit(LocalContext.current),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        // Rating row: stars + numeric average + count.
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            StarRow(media.averageRating)
+            Spacer(Modifier.width(6.dp))
+            Text("%.1f".format(media.averageRating),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.tertiary)
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(R.string.detail_rating_count,
+                "%,d".format(media.ratingCount)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Cover — placeholder icon box unless a real coverUrl exists.
-            CoverArt(media)
-
-            Spacer(Modifier.height(16.dp))
-            Text(media.title, style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center)
-            Spacer(Modifier.height(4.dp))
-            Text(media.creatorCredit(LocalContext.current),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-            // Rating row: stars + numeric average + count.
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StarRow(media.averageRating)
+        // "+ Want To" adds the item (POST /library). If it's already in the library we
+        // show its status instead and disable the button - changing status is next week.
+        // enabled is off while a request is in flight so it can't be tapped twice.
+        Spacer(Modifier.height(20.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = onAddToLibrary,
+                enabled = libraryStatus == null && !isUpdatingLibrary,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(20.dp)) {
+                Text(
+                    if (libraryStatus == null) stringResource(R.string.detail_want_to)
+                    else stringResource(libraryStatus.labelRes)
+                )
+            }
+            OutlinedButton(onClick = { /* Week 9: save */ },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(20.dp)) {
+                Icon(Icons.Outlined.FavoriteBorder, contentDescription = null,
+                    modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("%.1f".format(media.averageRating),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.tertiary)
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.detail_rating_count,
-                    "%,d".format(media.ratingCount)),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.detail_save))
             }
+        }
 
-            // Two action buttons — no-ops tonight.
-            Spacer(Modifier.height(20.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { /* Week 9: POST /library want_to */ },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(20.dp)) {
-                    Text(stringResource(R.string.detail_want_to))
-                }
-                OutlinedButton(onClick = { /* Week 9: save */ },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(20.dp)) {
-                    Icon(Icons.Outlined.FavoriteBorder, contentDescription = null,
-                        modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.detail_save))
-                }
+        // About
+        Spacer(Modifier.height(24.dp))
+        SectionLabel(stringResource(R.string.detail_about))
+        Spacer(Modifier.height(8.dp))
+        Text(media.description ?: "",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth())
+
+        // 3-box stat grid — middle box changes per media type.
+        Spacer(Modifier.height(16.dp))
+        val (statLabel, statValue) = media.typeStat(LocalContext.current)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatBox(stringResource(R.string.detail_stat_year),
+                media.publishedYear?.toString()
+                    ?: stringResource(R.string.detail_stat_unknown),
+                Modifier.weight(1f))
+            StatBox(statLabel, statValue, Modifier.weight(1f))
+            StatBox(stringResource(R.string.detail_stat_genre),
+                media.genres.firstOrNull()
+                    ?: stringResource(R.string.detail_stat_unknown),
+                Modifier.weight(1f))
+        }
+
+        // Reviews header. Counts with the server's reviewCount, not reviews.size — the
+        // list only holds the first 20, so the size would under-report a popular item.
+        Spacer(Modifier.height(24.dp))
+        Row(Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.detail_reviews, media.reviewCount),
+                style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = { onWriteReview(mediaId) }) {
+                Text(stringResource(R.string.detail_write_review))
             }
+        }
 
-            // About
-            Spacer(Modifier.height(24.dp))
-            SectionLabel(stringResource(R.string.detail_about))
-            Spacer(Modifier.height(8.dp))
-            Text(media.description ?: "",
+        Spacer(Modifier.height(8.dp))
+        if (reviews.isEmpty()) {
+            Text(stringResource(R.string.detail_no_reviews),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth())
-
-            // 3-box stat grid — middle box changes per media type.
-            Spacer(Modifier.height(16.dp))
-            val (statLabel, statValue) = media.typeStat(LocalContext.current)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatBox(stringResource(R.string.detail_stat_year),
-                    media.publishedYear?.toString()
-                        ?: stringResource(R.string.detail_stat_unknown),
-                    Modifier.weight(1f))
-                StatBox(statLabel, statValue, Modifier.weight(1f))
-                StatBox(stringResource(R.string.detail_stat_genre),
-                    media.genres.firstOrNull()
-                        ?: stringResource(R.string.detail_stat_unknown),
-                    Modifier.weight(1f))
-            }
-
-            // Reviews header
-            Spacer(Modifier.height(24.dp))
-            Row(Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.detail_reviews, reviews.size),
-                    style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = { onWriteReview(mediaId) }) {
-                    Text(stringResource(R.string.detail_write_review))
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
+        } else {
             reviews.forEach { review ->
                 ReviewCard(review)
                 Spacer(Modifier.height(12.dp))
@@ -186,11 +251,7 @@ private fun CoverArt(media: Media) {
                 contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         } else {
             Icon(
-                painter = painterResource(when (media.mediaType) {
-                    "book"  -> R.drawable.menu_book_24px
-                    "movie" -> R.drawable.movie_24px
-                    else    -> R.drawable.tv_24px
-                }),
+                painter = painterResource(media.mediaType.iconRes()),
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
@@ -251,7 +312,7 @@ private fun StatBox(label: String, value: String, modifier: Modifier = Modifier)
     }
 }
 
-/** A single hardcoded review: avatar, username, timestamp, stars, text. */
+/** A single review: avatar, username, timestamp, stars, text. */
 @Composable
 private fun ReviewCard(review: Review) {
     Card(
@@ -278,7 +339,9 @@ private fun ReviewCard(review: Review) {
                     verticalAlignment = Alignment.CenterVertically) {
                     Text("@${review.user?.username ?: "user"}",
                         style = MaterialTheme.typography.titleSmall)
-                    Text(review.createdAt, style = MaterialTheme.typography.labelSmall,
+                    // createdAt is a full ISO timestamp now that it's real data
+                    // ("2026-07-14T18:22:05Z") - take(10) keeps just the date part.
+                    Text(review.createdAt.take(10), style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(4.dp))
@@ -291,18 +354,4 @@ private fun ReviewCard(review: Review) {
             }
         }
     }
-}
-
-/** Fake reviews for tonight. Week 8+: replace with GET /reviews?mediaId={id}. */
-private fun sampleReviews(mediaId: Int): List<Review> {
-    val alice = UserProfile("user-101", "alice@example.com", "alice_reads", "Alice")
-    val marco = UserProfile("user-102", "marco@example.com", "marco_m", "Marco")
-    return listOf(
-        Review(userId = "user-101", mediaId = mediaId, rating = 5,
-            reviewText = "A timeless classic. Fresh every time.",
-            createdAt = "2d ago", user = alice),
-        Review(userId = "user-102", mediaId = mediaId, rating = 4,
-            reviewText = "Slow to start but absolutely worth it by the end.",
-            createdAt = "1w ago", user = marco),
-    )
 }

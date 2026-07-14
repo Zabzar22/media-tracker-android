@@ -137,5 +137,8 @@
     <string name="detail_stat_seasons_eps_value">%1$d · %2$d</string>
     <string name="detail_stat_unknown">&#8212;</string>
     <string name="detail_not_found">Media not found.</string>
+    <string name="detail_error">Couldn\'t load this item.</string>
+    <string name="detail_no_reviews">No reviews yet. Be the first!</string>
+    <string name="action_retry">Retry</string>
 
 </resources>

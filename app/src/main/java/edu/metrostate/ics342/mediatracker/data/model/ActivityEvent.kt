@@ -42,8 +42,8 @@ fun ActivityEvent.actionPhrase(context: Context): String = when (activityType) {
     "added"    -> context.getString(R.string.feed_header_added)
     "started"  -> context.getString(R.string.feed_header_started)
     "finished" -> when (media?.mediaType) {
-        "book" -> context.getString(R.string.feed_header_finished_reading)
-        else   -> context.getString(R.string.feed_header_finished_watching)
+        MediaType.BOOK -> context.getString(R.string.feed_header_finished_reading)
+        else           -> context.getString(R.string.feed_header_finished_watching)
     }
     "review"   -> context.getString(R.string.feed_header_reviewed)
     else       -> context.getString(R.string.feed_header_updated)

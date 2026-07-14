@@ -25,8 +25,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import edu.metrostate.ics342.mediatracker.R
 import edu.metrostate.ics342.mediatracker.data.model.ActivityEvent
+import edu.metrostate.ics342.mediatracker.data.model.MediaType
 import edu.metrostate.ics342.mediatracker.data.model.actionPhrase
 import edu.metrostate.ics342.mediatracker.data.model.creatorCredit
+import edu.metrostate.ics342.mediatracker.data.model.iconRes
 import edu.metrostate.ics342.mediatracker.theme.avatarColor
 import kotlin.math.roundToInt
 
@@ -172,14 +174,14 @@ private fun ActivityCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val containerColor = when (event.media?.mediaType) {
-                    "book"  -> MaterialTheme.colorScheme.primaryContainer
-                    "movie" -> MaterialTheme.colorScheme.secondaryContainer
-                    else    -> MaterialTheme.colorScheme.tertiaryContainer
+                    MediaType.BOOK  -> MaterialTheme.colorScheme.primaryContainer
+                    MediaType.MOVIE -> MaterialTheme.colorScheme.secondaryContainer
+                    else            -> MaterialTheme.colorScheme.tertiaryContainer
                 }
                 val iconTint = when (event.media?.mediaType) {
-                    "book"  -> MaterialTheme.colorScheme.onPrimaryContainer
-                    "movie" -> MaterialTheme.colorScheme.onSecondaryContainer
-                    else    -> MaterialTheme.colorScheme.tertiary
+                    MediaType.BOOK  -> MaterialTheme.colorScheme.onPrimaryContainer
+                    MediaType.MOVIE -> MaterialTheme.colorScheme.onSecondaryContainer
+                    else            -> MaterialTheme.colorScheme.tertiary
                 }
 
                 Box(
@@ -198,13 +200,7 @@ private fun ActivityCard(
                         )
                     } else {
                         Icon(
-                            painter = painterResource(
-                                when (event.media?.mediaType) {
-                                    "book"  -> R.drawable.menu_book_24px
-                                    "movie" -> R.drawable.movie_24px
-                                    else    -> R.drawable.tv_24px
-                                }
-                            ),
+                            painter = painterResource(event.media?.mediaType.iconRes()),
                             contentDescription = null,
                             tint     = iconTint,
                             modifier = Modifier.size(24.dp)

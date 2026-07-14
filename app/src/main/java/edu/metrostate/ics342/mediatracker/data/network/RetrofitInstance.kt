@@ -9,7 +9,9 @@ import retrofit2.Retrofit
 
 object RetrofitInstance {
 
-    private val json = Json { ignoreUnknownKeys = true }
+    // internal (was private) so repositories can reuse it to read error bodies —
+    // Retrofit only parses successful ones for us.
+    internal val json = Json { ignoreUnknownKeys = true }
 
     private fun loggingInterceptor() = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
@@ -42,4 +44,10 @@ object RetrofitInstance {
         .build()
 
     val mediaApiService: MediaApiService = authedRetrofit.create(MediaApiService::class.java)
+
+    // Library calls need the bearer token too, so they go through the authed client.
+    val libraryApiService: LibraryApiService = authedRetrofit.create(LibraryApiService::class.java)
+
+    // Same for reviews (GET /reviews is behind auth like everything except register/login).
+    val reviewApiService: ReviewApiService = authedRetrofit.create(ReviewApiService::class.java)
 }

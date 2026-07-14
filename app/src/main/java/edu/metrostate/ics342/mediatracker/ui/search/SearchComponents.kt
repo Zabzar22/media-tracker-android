@@ -19,7 +19,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import edu.metrostate.ics342.mediatracker.R
 import edu.metrostate.ics342.mediatracker.data.model.Media
+import edu.metrostate.ics342.mediatracker.data.model.MediaType
 import edu.metrostate.ics342.mediatracker.data.model.creatorCredit
+import edu.metrostate.ics342.mediatracker.data.model.iconRes
 
 @Composable
 fun MediaTypeFilterChips(
@@ -74,14 +76,14 @@ fun MediaResultCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             val containerColor = when (media.mediaType) {
-                "book"  -> MaterialTheme.colorScheme.primaryContainer
-                "movie" -> MaterialTheme.colorScheme.secondaryContainer
-                else    -> MaterialTheme.colorScheme.tertiaryContainer
+                MediaType.BOOK  -> MaterialTheme.colorScheme.primaryContainer
+                MediaType.MOVIE -> MaterialTheme.colorScheme.secondaryContainer
+                MediaType.SHOW  -> MaterialTheme.colorScheme.tertiaryContainer
             }
             val iconTint = when (media.mediaType) {
-                "book"  -> MaterialTheme.colorScheme.onPrimaryContainer
-                "movie" -> MaterialTheme.colorScheme.onSecondaryContainer
-                else    -> MaterialTheme.colorScheme.tertiary
+                MediaType.BOOK  -> MaterialTheme.colorScheme.onPrimaryContainer
+                MediaType.MOVIE -> MaterialTheme.colorScheme.onSecondaryContainer
+                MediaType.SHOW  -> MaterialTheme.colorScheme.tertiary
             }
 
             Box(
@@ -92,11 +94,7 @@ fun MediaResultCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(when (media.mediaType) {
-                        "book"  -> R.drawable.menu_book_24px
-                        "movie" -> R.drawable.movie_24px
-                        else    -> R.drawable.tv_24px
-                    }),
+                    painter = painterResource(media.mediaType.iconRes()),
                     contentDescription = null,
                     modifier = Modifier.size(32.dp),
                     tint = iconTint
@@ -134,7 +132,7 @@ fun MediaResultCard(
                     Text(
                         text = buildString {
                             if (media.averageRating > 0f) append(" · ")
-                            append(media.mediaType.replaceFirstChar { it.uppercase() })
+                            append(media.mediaType.displayName)
                             media.publishedYear?.let { append(" · $it") }
                         },
                         style = MaterialTheme.typography.bodySmall,

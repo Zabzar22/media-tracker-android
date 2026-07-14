@@ -3,25 +3,37 @@ package edu.metrostate.ics342.mediatracker.ui.detail
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import edu.metrostate.ics342.mediatracker.data.FakeMediaRepository
+import edu.metrostate.ics342.mediatracker.data.model.LibraryStatus
 import edu.metrostate.ics342.mediatracker.data.model.Media
+import edu.metrostate.ics342.mediatracker.data.model.Review
+import edu.metrostate.ics342.mediatracker.data.network.DefaultLibraryRepository
 import edu.metrostate.ics342.mediatracker.data.network.DefaultMediaRepository
+import edu.metrostate.ics342.mediatracker.data.network.DefaultReviewRepository
+import edu.metrostate.ics342.mediatracker.data.network.MediaNotFoundException
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// What the detail screen renders. The detail screen is the ONLY place that pulls a
-// single item from the server (GET /media/{id}); search / library / feed keep using
-// their own data sources.
+// What the detail screen can be showing. Same loading / success / error idea I used for
+// search, plus NotFound so a bad id gets its own message instead of "something broke".
 sealed interface MediaDetailUiState {
     data object Loading : MediaDetailUiState
-    data class Success(val media: Media) : MediaDetailUiState
+    data class Success(
+        val media: Media,
+        val libraryStatus: LibraryStatus? = null,   // null = not in the library yet
+        val reviews: List<Review> = emptyList(),
+        val isUpdatingLibrary: Boolean = false       // true while POST /library is running
+    ) : MediaDetailUiState
     data object NotFound : MediaDetailUiState
+    data class Error(val message: String) : MediaDetailUiState
 }
 
 class MediaDetailViewModel : ViewModel() {
     private val repository = DefaultMediaRepository()
+    private val libraryRepository = DefaultLibraryRepository()
+    private val reviewRepository = DefaultReviewRepository()
 
     private val _uiState = MutableStateFlow<MediaDetailUiState>(MediaDetailUiState.Loading)
     val uiState: StateFlow<MediaDetailUiState> = _uiState.asStateFlow()
@@ -29,22 +41,51 @@ class MediaDetailViewModel : ViewModel() {
     fun load(mediaId: Int) {
         _uiState.value = MediaDetailUiState.Loading
         viewModelScope.launch {
-            val fromServer = try {
-                repository.getMedia(mediaId)
-            } catch (e: Exception) {
+            // All three go out at once instead of waiting in line. Each one catches its own
+            // failure and hands back a Result: an async that throws also kills its siblings,
+            // and that escapes a try/catch around await(), so none of them may throw.
+            val mediaCall   = async { runCatching { repository.getMedia(mediaId) } }
+            val libraryCall = async { runCatching { libraryRepository.getLibraryItem(mediaId) } }
+            val reviewsCall = async { runCatching { reviewRepository.getReviews(mediaId) } }
+
+            // Only the media call decides whether we have a screen at all.
+            val media = mediaCall.await().getOrElse { e ->
                 Log.w("MediaDetail", "GET /media/$mediaId failed", e)
-                null
+                // Blank message = the screen falls back to its own wording.
+                _uiState.value =
+                    if (e is MediaNotFoundException) MediaDetailUiState.NotFound
+                    else MediaDetailUiState.Error(e.message.orEmpty())
+                return@launch
             }
 
-            // Fall back to the bundled sample item only when the server doesn't have
-            // this id — e.g. tapping one of the hardcoded library/feed entries whose
-            // ids don't exist on the server. Real search results resolve from the
-            // server above and show their real cover.
-            val media = fromServer ?: FakeMediaRepository.mediaList.find { it.id == mediaId }
+            // The other two are extras - if they fail we still show the page without them.
+            val status = libraryCall.await()
+                .onFailure { Log.w("MediaDetail", "GET /library/$mediaId failed", it) }
+                .getOrNull()?.status
+            val reviews = reviewsCall.await()
+                .onFailure { Log.w("MediaDetail", "GET /reviews?mediaId=$mediaId failed", it) }
+                .getOrElse { emptyList() }
 
-            _uiState.value =
-                if (media != null) MediaDetailUiState.Success(media)
-                else MediaDetailUiState.NotFound
+            _uiState.value = MediaDetailUiState.Success(media, status, reviews)
+        }
+    }
+
+    // "+ Want To" tap. Adds the item as want_to. Guards against a double-tap: if a request
+    // is already in flight, or it's already in the library, this does nothing.
+    fun addToWantTo(mediaId: Int) {
+        val current = _uiState.value
+        if (current !is MediaDetailUiState.Success) return
+        if (current.isUpdatingLibrary || current.libraryStatus != null) return
+
+        _uiState.value = current.copy(isUpdatingLibrary = true)
+        viewModelScope.launch {
+            _uiState.value = try {
+                val item = libraryRepository.addToLibrary(mediaId, LibraryStatus.WANT_TO)
+                current.copy(libraryStatus = item.status, isUpdatingLibrary = false)
+            } catch (e: Exception) {
+                Log.w("MediaDetail", "POST /library failed", e)
+                current.copy(isUpdatingLibrary = false)   // let them try again
+            }
         }
     }
 }

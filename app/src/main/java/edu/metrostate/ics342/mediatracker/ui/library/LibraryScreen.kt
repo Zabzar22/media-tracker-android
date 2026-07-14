@@ -25,7 +25,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import edu.metrostate.ics342.mediatracker.data.model.LibraryItem
 import edu.metrostate.ics342.mediatracker.data.model.LibraryStatus
+import edu.metrostate.ics342.mediatracker.data.model.MediaType
 import edu.metrostate.ics342.mediatracker.data.model.creatorCredit
+import edu.metrostate.ics342.mediatracker.data.model.iconRes
 import edu.metrostate.ics342.mediatracker.ui.components.StatusBadge
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -187,24 +189,20 @@ private fun LibraryItemCard(
                     // Colored cover tile per media type — matches the feed/search cards and
                     // the wireframe (book = indigo, movie = pink, show = amber).
                     val coverColor = when (item.media.mediaType) {
-                        "book"  -> MaterialTheme.colorScheme.primaryContainer
-                        "movie" -> MaterialTheme.colorScheme.secondaryContainer
-                        else    -> MaterialTheme.colorScheme.tertiaryContainer
+                        MediaType.BOOK  -> MaterialTheme.colorScheme.primaryContainer
+                        MediaType.MOVIE -> MaterialTheme.colorScheme.secondaryContainer
+                        MediaType.SHOW  -> MaterialTheme.colorScheme.tertiaryContainer
                     }
                     val iconTint = when (item.media.mediaType) {
-                        "book"  -> MaterialTheme.colorScheme.onPrimaryContainer
-                        "movie" -> MaterialTheme.colorScheme.onSecondaryContainer
-                        else    -> MaterialTheme.colorScheme.tertiary
+                        MediaType.BOOK  -> MaterialTheme.colorScheme.onPrimaryContainer
+                        MediaType.MOVIE -> MaterialTheme.colorScheme.onSecondaryContainer
+                        MediaType.SHOW  -> MaterialTheme.colorScheme.tertiary
                     }
                     Surface(color = coverColor,
                         modifier = Modifier.fillMaxSize()) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                painter = painterResource(when (item.media.mediaType) {
-                                    "book"  -> edu.metrostate.ics342.mediatracker.R.drawable.menu_book_24px
-                                    "movie" -> edu.metrostate.ics342.mediatracker.R.drawable.movie_24px
-                                    else    -> edu.metrostate.ics342.mediatracker.R.drawable.tv_24px
-                                }),
+                                painter = painterResource(item.media.mediaType.iconRes()),
                                 contentDescription = null,
                                 modifier = Modifier.size(28.dp),
                                 tint = iconTint
