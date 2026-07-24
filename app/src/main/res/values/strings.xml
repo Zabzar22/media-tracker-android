@@ -37,6 +37,10 @@
     <string name="filter_comics">Comics</string>
     <string name="filter_albums">Albums</string>
     <string name="library_empty">Nothing here yet.\nSearch for something to add.</string>
+    <string name="library_error">Couldn\'t load your library.</string>
+    <string name="library_empty_status">Nothing in \'%1$s\' yet.</string>
+    <string name="profile_favorites">Favorites</string>
+    <string name="profile_no_favorites">Nothing saved yet.</string>
     <string name="library_items_count">%1$d items</string>
     <string name="library_item_count">%1$d item</string>
     <string name="action_more_options">More options</string>
@@ -124,6 +128,7 @@
     <!-- Media Detail -->
     <string name="detail_want_to">+ Want To</string>
     <string name="detail_save">Save</string>
+    <string name="detail_saved">Saved</string>
     <string name="detail_about">About</string>
     <string name="detail_write_review">+ Write Review</string>
     <string name="detail_reviews">Reviews (%1$d)</string>

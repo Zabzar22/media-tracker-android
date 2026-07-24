@@ -40,6 +40,7 @@ fun LibraryScreen(
     val items     by viewModel.libraryItems.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val selectedStatus by viewModel.filterState.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         TopAppBar(
@@ -93,15 +94,39 @@ fun LibraryScreen(
             return@Column
         }
 
-        val filteredItems = items.filter { it.status == selectedStatus }
+        // the request came back bad, so say so and offer a retry instead of showing
+        // an empty library that isn't really empty.
+        val error = errorMessage
+        if (error != null) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        error.ifBlank { stringResource(edu.metrostate.ics342.mediatracker.R.string.library_error) },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(onClick = { viewModel.loadLibrary() }) {
+                        Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.action_retry))
+                    }
+                }
+            }
+            return@Column
+        }
 
-        if (filteredItems.isEmpty()) {
+        if (items.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
+                // names the tab you're on, so "Finished" empty reads differently from
+                // "Want To" empty instead of one message covering all three.
                 Text(
-                    stringResource(edu.metrostate.ics342.mediatracker.R.string.library_empty),
+                    stringResource(
+                        edu.metrostate.ics342.mediatracker.R.string.library_empty_status,
+                        stringResource(selectedStatus.labelRes)
+                    ),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -111,8 +136,8 @@ fun LibraryScreen(
         }
 
         Text(
-            if (filteredItems.size == 1) stringResource(edu.metrostate.ics342.mediatracker.R.string.library_item_count, filteredItems.size)
-            else stringResource(edu.metrostate.ics342.mediatracker.R.string.library_items_count, filteredItems.size),
+            if (items.size == 1) stringResource(edu.metrostate.ics342.mediatracker.R.string.library_item_count, items.size)
+            else stringResource(edu.metrostate.ics342.mediatracker.R.string.library_items_count, items.size),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             style    = MaterialTheme.typography.labelMedium,
             color    = MaterialTheme.colorScheme.onSurfaceVariant
@@ -122,7 +147,7 @@ fun LibraryScreen(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(filteredItems, key = { it.mediaId }) { item ->
+            items(items, key = { it.mediaId }) { item ->
                 LibraryItemCard(
                     item           = item,
                     onClick        = { onMediaClick(item.mediaId) },

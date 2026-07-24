@@ -1,5 +1,6 @@
 package edu.metrostate.ics342.mediatracker.ui.detail
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -108,7 +110,10 @@ fun MediaDetailScreen(
                     libraryStatus = state.libraryStatus,
                     reviews = state.reviews,
                     isUpdatingLibrary = state.isUpdatingLibrary,
+                    isFavorite = state.isFavorite,
+                    isUpdatingFavorite = state.isUpdatingFavorite,
                     onAddToLibrary = { viewModel.addToWantTo(mediaId) },
+                    onToggleFavorite = { viewModel.toggleFavorite(mediaId) },
                     onWriteReview = onWriteReview
                 )
         }
@@ -124,7 +129,10 @@ private fun MediaDetailContent(
     libraryStatus: LibraryStatus?,
     reviews: List<Review>,
     isUpdatingLibrary: Boolean,
+    isFavorite: Boolean,
+    isUpdatingFavorite: Boolean,
     onAddToLibrary: () -> Unit,
+    onToggleFavorite: () -> Unit,
     onWriteReview: (Int) -> Unit
 ) {
     Column(
@@ -160,27 +168,65 @@ private fun MediaDetailContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        // "+ Want To" adds the item (POST /library). If it's already in the library we
-        // show its status instead and disable the button - changing status is next week.
-        // enabled is off while a request is in flight so it can't be tapped twice.
+        // "+ Want To" adds the item (POST /library). two different buttons depending on
+        // whether it's in the library yet, the same way the follow button works over on
+        // the people screen ; changing status once it's in there is next week.
         Spacer(Modifier.height(20.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = onAddToLibrary,
-                enabled = libraryStatus == null && !isUpdatingLibrary,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(20.dp)) {
-                Text(
-                    if (libraryStatus == null) stringResource(R.string.detail_want_to)
-                    else stringResource(libraryStatus.labelRes)
-                )
+            if (libraryStatus == null) {
+                // not added yet ; filled purple button that does the adding.
+                // enabled is off while the request runs so it can't be tapped twice.
+                Button(onClick = onAddToLibrary,
+                    enabled = !isUpdatingLibrary,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(20.dp)) {
+                    Text(stringResource(R.string.detail_want_to))
+                }
+            } else {
+                // already in the library ; matches the saved button next to it, white
+                // with purple text, and there's nothing left to tap.
+                OutlinedButton(onClick = { },
+                    enabled = false,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        disabledContentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    // a disabled button fades its own border until you can't see it,
+                    // so we hand it one ; BorderStroke is just thickness and color.
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)) {
+                    Text(stringResource(libraryStatus.labelRes))
+                }
             }
-            OutlinedButton(onClick = { /* Week 9: save */ },
+            // the "Save" button toggles the item in and out of favorites. the heart fills
+            // in once it's saved, and tapping again takes it back out ; it's the only
+            // place in the app that can un-save something.
+            OutlinedButton(onClick = onToggleFavorite,
+                enabled = !isUpdatingFavorite,
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(20.dp)) {
-                Icon(Icons.Outlined.FavoriteBorder, contentDescription = null,
+                shape = RoundedCornerShape(20.dp),
+                // keeps the text and heart purple ; the default disabled color would
+                // grey them out once it's saved.
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor         = MaterialTheme.colorScheme.primary,
+                    disabledContentColor = MaterialTheme.colorScheme.primary
+                ),
+                // grey outline while it can still be tapped, like the wireframe shows,
+                // then purple once it's saved so it matches the button beside it.
+                border = BorderStroke(
+                    1.dp,
+                    if (isFavorite) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.outline
+                )) {
+                Icon(
+                    if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = null,
                     modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.detail_save))
+                Text(
+                    if (isFavorite) stringResource(R.string.detail_saved)
+                    else stringResource(R.string.detail_save)
+                )
             }
         }
 

@@ -50,4 +50,7 @@ object RetrofitInstance {
 
     // Same for reviews (GET /reviews is behind auth like everything except register/login).
     val reviewApiService: ReviewApiService = authedRetrofit.create(ReviewApiService::class.java)
+
+    // favorites need the token too, so same authed client as the ones above.
+    val favoriteApiService: FavoriteApiService = authedRetrofit.create(FavoriteApiService::class.java)
 }
