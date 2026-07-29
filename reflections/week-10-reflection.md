@@ -2,55 +2,68 @@
 
 **Name:** Kenan Port
 **Date:** 07-23-2026
+**Updated:** 07-29-2026
 
 ---
 
 ## Commits This Week
 
-**Link:**
+**Link:** https://github.com/Zabzar22/media-tracker-android/commits/week-10
+
+**Pull request:** https://github.com/Zabzar22/media-tracker-android/pull/11
 
 ---
 
 ## Code Review
 
-**Reviewed:**
-**Link to my review:**
+**Reviewed:** Samba Kamara
+**Link to my review:** https://github.com/fascineh1/media-tracker-android/pull/10#issuecomment-5120655868
 
 ### What I Looked At
 
+His week-10 PR (#10), four commits covering the library and favorites endpoints, the profile and detail updates, and a rollback test at the end. I focused on `LibraryViewModel`, `MediaDetailViewModel`, `DefaultMediaRepository`, and `LibraryViewModelTest`, since the point of this week was making the taps optimistic and proving the rollback actually works.
+
 ### What I Noticed
 
+Two things I liked before the one thing I'd change. He put his repository behind a `MediaRepository` interface, which meant his test could mock the interface instead of the concrete class — I skipped that step and ended up mocking `DefaultLibraryRepository` directly, so his is the cleaner version of the same idea. The other one is in his `loadLibrary()`: he saves the selected status before the request and checks it still matches before writing the result. Neither I nor the professor did that, and it means a slow request for one tab can't land on top of a tab you already switched away to.
+
+The thing worth changing is in `MediaDetailViewModel.load()`. His repository already turns a 404 into `null` for both the library check and the favorite check, so "not added" and "not favorited" are handled correctly. But all three `async` calls get awaited inside one `try`, and the two side calls aren't treated as optional. So if the favorite check fails for a real reason — an expired token, a 500, a dropped connection — the whole detail page goes to the error state even though `GET /media/{id}` came back fine. There's the coroutine problem underneath it too: an `async` that throws cancels its siblings, and the exception can get past the `try` you wrapped around `await()`. That's the exact thing I said I had no intuition for in my week-08 reflection, so it was strange to be the one pointing at it this time.
+
 ### Comments I Left
+
+I opened with the interface and the stale-tab guard, and was specific that his mocking setup was cleaner than mine rather than just saying it looked good. Then I raised the `load()` issue and explained the consequence instead of only naming it — that a failed favorite check takes down a page whose media call succeeded — and mentioned the sibling-cancellation part as the reason a `try` around `await()` isn't enough on its own. I suggested the fix I used, which is `runCatching` inside each of the two side `async` blocks and then `.getOrNull()` on them, so only the media call can fail the screen. I closed by saying a good chunk of what the professor's branch has this week reads like stretch goals, so I wouldn't worry about whatever he left out.
 
 ---
 
 ## One Thing I Understood More Deeply
 
-The list on the screen is a copy, not the real thing, and I did not really feel that until it bit me. My `removeItem()` from a couple weeks back just did `_libraryItems.value.filter { it.mediaId != mediaId }`, and honestly it looked finished. You tap remove, the row disappears, no errors, no crash. It was only after I swapped My Library over to `GET /library` this week that I found out it never worked at all. Now every tab tap fires a fresh request, so I removed something, switched to Finished, came back to Want To, and there it was again. Nothing had happened on the server. I had crossed the name off my own printout and thought I had changed the record.
+I started this week with the safe version: tell the server, wait, then call `loadLibrary()` again and draw whatever came back. It worked, and it couldn't get out of sync, because the screen never held an opinion the server hadn't confirmed. What I didn't appreciate is that "correct" was doing all the work there, and what it cost was a spinner flash on every single tap.
 
-What made it click was realizing that part 1 did not break anything, it just gave the bug a way to show itself. Before this week nothing ever re-fetched, so the app never had a chance to disagree with the server, and a local edit could sit there looking correct forever. So the fix was not really about `DELETE`, it was about accepting that my screen does not own that data. It draws whatever came back from the last `GET`, and if I want something to actually change I have to tell the server and then ask again.
+Going optimistic meant giving that up on purpose, and the part that actually clicked is that the list on screen stops being a copy of the truth and becomes a prediction of it. Once it's a prediction you need two things you never needed before: a saved copy of what you're about to destroy, and a path back to it. That's all `rollBack()` is in my `LibraryViewModel` — grab the item first, filter it out, and if the request throws, put it back and say why. I'd been thinking of optimistic updates as a speed trick, and they're really a bookkeeping problem where speed is the payoff.
 
-The professor said something in class about transactional stuff needing to make the user wait so the data set stays up to date, and that is the same idea from the other side. If you do not wait, you are showing the user something you have not confirmed yet. Both of my buttons work that way now; `toggleFavorite()` sets `isUpdatingFavorite = true`, disables the button, waits, and only then flips the heart. If the call throws, the state never changes and you can try again. It feels slow, but it cannot lie, and I think I would rather be slow than wrong at this point in the project.
+The test is what made that concrete instead of just something I'd typed. In `removeItem takes the item out right away` I deliberately do *not* call `advanceUntilIdle()` before asserting, because the whole claim is that the row is gone before `DELETE` has even run. Move that one line up and the test still passes, but it stops testing anything. The other thing I got out of writing it is that constructor injection wasn't a style preference — my ViewModel built its own `DefaultLibraryRepository()` inside the class, and that doesn't make the test hard, it makes it impossible, because there's no seam to put a fake through. So the `@JvmOverloads constructor` with a default was a prerequisite, not a cleanup.
 
 ---
 
 ## One Thing I'm Still Confused About
 
-After a call succeeds, I do not know how you are supposed to decide between reloading the whole list and just patching the one item you changed by hand. I went with reload for both remove and status change, so `removeItem()` calls `removeFromLibrary()` and then immediately calls `loadLibrary()` again. I picked it because it means I never have to think about which item goes in which tab, or what happens when you move something to Finished while you are looking at Want To. The server decides, I just draw it. But it is obviously more requests than I need, and there is a spinner flash after every single tap, which looks bad.
+What happens when two optimistic actions are in flight at once. My `rollBack()` appends the backup to whatever the list currently is, so if I remove A and then remove B and A's request fails, A comes back onto a list that has already lost B — which I think is right. Samba restores the whole `previousItems` snapshot he captured before his tap, and if I'm reading it correctly that would put B back too, undoing a removal that actually succeeded. I only spotted the difference because I was reviewing his code right after writing mine, and I genuinely don't know which one is the accepted answer, or whether real apps just serialize the requests so the situation can't come up in the first place.
 
-The alternative is patching the local list myself, which is what the optimistic pattern in the handout does. That is faster and smoother, but now I am maintaining a second version of the truth and hoping it agrees with the first one. And the handout's rollback example even says it is fine if a rolled back item lands at the end of the list instead of where it was, which tells me the copies are allowed to drift a little, and I do not have a feel for how much drift is acceptable before you have a real bug. I am guessing the answer is something like "reload when it is cheap, patch when the user would notice the wait," but that is me guessing, not something I actually understand yet.
+The same question shows up on the favorite button. I removed the `isUpdatingFavorite` flag when I went optimistic, since disabling the button defeats the point of it flipping instantly, but that means a fast double-tap fires `POST` and then `DELETE` and the server settles on whichever one lands last. I think that's fine, because the heart already shows the state the user asked for either way. I can't prove it though, and I don't have a way to test it that isn't just tapping quickly and hoping.
 
 ---
 
 ## Anything Else
 
-Being straight about where this actually is, because the last two weeks I had to admit the API was not really connected. This week it is. My Library pulls from `GET /library` with the tab wired to the `status` query, so the server does the filtering instead of me filtering a list I already had. I got to delete `items.filter { it.status == selectedStatus }` from the screen, which was a weirdly satisfying way to find out the step was working. Cover art is how I confirmed it, actually; those library cards already had an `if (coverUrl != null)` check sitting in them doing nothing, and the moment I swapped to real data they filled in with actual book and movie covers. That was better proof than counting rows.
+Scope notes, so it's clear what's mine and what isn't. Beyond the handout I added `DELETE /favorites/{mediaId}`, because the Save button had no way to undo itself, and a favorites list on the profile screen, because otherwise saving something had no visible result anywhere except the button that saved it. The profile around it is still mock data, so it's a real list sitting inside a fake profile.
 
-A few honest notes on scope. "+ Want To" turned out to be already done from week 8, so requirement 1 was free. I did add `DELETE /favorites/{mediaId}`, which the handout did not ask for, because the Save button had no way to undo itself and there is no favorites screen to remove things from; it seemed worse to ship a button you can only press once. I also put a favorites list on the profile screen. That is a stretch goal from the part 2 handout and it is not in the wireframes anywhere, but saving something had literally no visible result other than the button changing, which felt broken even though it was not. The profile itself is still mock data, so it is a real list sitting inside a fake profile, which is a little odd but at least the part that matters is real.
+I kept my full-screen error and Retry for a failed `GET /library`, and added a separate `actionError` for taps that got rolled back, which go to a snackbar instead. That split fixed something I'd shipped without noticing: a failed `DELETE` used to set the same `errorMessage` the loader uses, so one failed removal replaced a library that had loaded perfectly fine with an error screen.
 
-Two things I am deliberately not done with. I have not done optimistic updates yet, so everything still waits on the server; I wanted remove and status change working honestly before making anything feel fast. And I have not written the MockK rollback test, because there is no rollback to test until the optimistic part exists. Both of those are next.
+I skipped one thing the professor has, which is library pagination — the `LibraryPage` wrapper that reads `X-Next-Cursor` and `X-Has-More`. I left it out because his own `LibraryViewModel` builds the page and then only reads `page.items`; the cursor and `hasMore` never get used, so copying it would have been scaffolding that does nothing.
 
-One thing I noticed that is not from this week and did not fix: search result cards always show the placeholder icon instead of real cover art. `SearchComponents.kt` never checks `coverUrl` at all, even though the server sends one, so it is just a leftover from when that card was built against mock data. Library and Media Detail both check it, so it is only Search. Also the stars are missing on search results, but that one is correct behavior; the catalog genuinely has no ratings yet because `average_rating` is calculated from reviews by a trigger, and nobody has posted any, so the card hides the star instead of printing 0.0 on everything. Took me a minute to convince myself that one was not a bug.
+Two honest ones. My snackbar messages are hardcoded English strings inside the ViewModels instead of living in `strings.xml`, which is inconsistent with how the rest of this project handles text — a plain `ViewModel` has no `Context`, and I took the shortcut rather than passing the mapping back through the screen. And the copy of the API repo I have locally doesn't have a `/favorites` route in it at all, so I couldn't check that contract against the source the way I did for `/library`. I went off the professor's Android branch instead and confirmed he calls the same endpoints I do, which is good enough to build against, but it isn't the same as reading the server code.
+
+Also still true and still not from this week: search result cards never check `coverUrl`, so they always show the placeholder icon even though the server sends a real cover. Library, detail, and now the profile favorites all check it. It's only `SearchComponents.kt`.
 
 ---
 

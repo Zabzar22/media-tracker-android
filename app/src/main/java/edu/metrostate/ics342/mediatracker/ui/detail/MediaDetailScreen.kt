@@ -52,12 +52,23 @@ fun MediaDetailScreen(
     viewModel: MediaDetailViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val actionError by viewModel.actionError.collectAsState()
 
     // Only want to load once when the screen opens (or if the id changes). Putting the
     // call in LaunchedEffect instead of straight in the body stops it from re-running
     // GET /media/{id} on every recomposition, which was making it loop.
     LaunchedEffect(mediaId) { viewModel.load(mediaId) }
 
+    // a button that flipped back gets a snackbar down here, so the page stays up.
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(actionError) {
+        actionError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearActionError()
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { },
@@ -109,14 +120,18 @@ fun MediaDetailScreen(
                     mediaId = mediaId,
                     libraryStatus = state.libraryStatus,
                     reviews = state.reviews,
-                    isUpdatingLibrary = state.isUpdatingLibrary,
                     isFavorite = state.isFavorite,
-                    isUpdatingFavorite = state.isUpdatingFavorite,
                     onAddToLibrary = { viewModel.addToWantTo(mediaId) },
                     onToggleFavorite = { viewModel.toggleFavorite(mediaId) },
                     onWriteReview = onWriteReview
                 )
         }
+    }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier  = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -128,9 +143,7 @@ private fun MediaDetailContent(
     mediaId: Int,
     libraryStatus: LibraryStatus?,
     reviews: List<Review>,
-    isUpdatingLibrary: Boolean,
     isFavorite: Boolean,
-    isUpdatingFavorite: Boolean,
     onAddToLibrary: () -> Unit,
     onToggleFavorite: () -> Unit,
     onWriteReview: (Int) -> Unit
@@ -170,14 +183,13 @@ private fun MediaDetailContent(
 
         // "+ Want To" adds the item (POST /library). two different buttons depending on
         // whether it's in the library yet, the same way the follow button works over on
-        // the people screen ; changing status once it's in there is next week.
+        // the people screen.
         Spacer(Modifier.height(20.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (libraryStatus == null) {
-                // not added yet ; filled purple button that does the adding.
-                // enabled is off while the request runs so it can't be tapped twice.
+                // not added yet ; filled purple button that does the adding. one tap swaps
+                // it for the outlined one below, so there's nothing to disable.
                 Button(onClick = onAddToLibrary,
-                    enabled = !isUpdatingLibrary,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(20.dp)) {
                     Text(stringResource(R.string.detail_want_to))
@@ -202,7 +214,6 @@ private fun MediaDetailContent(
             // in once it's saved, and tapping again takes it back out ; it's the only
             // place in the app that can un-save something.
             OutlinedButton(onClick = onToggleFavorite,
-                enabled = !isUpdatingFavorite,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(20.dp),
                 // keeps the text and heart purple ; the default disabled color would

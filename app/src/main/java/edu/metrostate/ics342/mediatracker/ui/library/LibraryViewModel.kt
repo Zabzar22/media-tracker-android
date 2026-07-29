@@ -13,9 +13,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class LibraryViewModel : ViewModel() {
-
-    private val libraryRepository = DefaultLibraryRepository()
+// the repository is a constructor parameter with a default instead of being built in here,
+// so the test can hand in a mockk fake. @JvmOverloads keeps the no-argument constructor
+// that viewModel() needs.
+class LibraryViewModel @JvmOverloads constructor(
+    private val libraryRepository: DefaultLibraryRepository = DefaultLibraryRepository()
+) : ViewModel() {
 
     private val _libraryItems = MutableStateFlow<List<LibraryItem>>(emptyList())
     val libraryItems: StateFlow<List<LibraryItem>> = _libraryItems.asStateFlow()
@@ -27,6 +30,12 @@ class LibraryViewModel : ViewModel() {
     // show it with a Retry instead of pretending the library is empty.
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    // a tap that failed and got rolled back. this one is separate from errorMessage on
+    // purpose ; the list is still fine, so it goes in a snackbar instead of replacing the
+    // whole screen the way a failed load does.
+    private val _actionError = MutableStateFlow<String?>(null)
+    val actionError: StateFlow<String?> = _actionError.asStateFlow()
 
     private val _filterState = MutableStateFlow( value = LibraryStatus.WANT_TO)
     val filterState: StateFlow<LibraryStatus> = _filterState.asStateFlow()
@@ -53,34 +62,52 @@ class LibraryViewModel : ViewModel() {
         }
     }
 
-    // both of these tell the server first, then reload the tab so what's on screen is
-    // whatever the server actually has. that's why a removed item no longer comes back
-    // when you switch tabs ; it's really gone now, not just hidden from our copy.
+    // optimistic. the row goes away the moment you tap, and DELETE /library/{mediaId} runs
+    // after. we keep a copy of the item first so a failed request can put it back.
     fun removeItem(mediaId: Int) {
+        val backup = _libraryItems.value.find { it.mediaId == mediaId } ?: return
+        _libraryItems.value = _libraryItems.value.filter { it.mediaId != mediaId }
+
         viewModelScope.launch {
             try {
                 libraryRepository.removeFromLibrary(mediaId)
-                loadLibrary()
             } catch (e: Exception) {
                 Log.w("Library", "DELETE /library/$mediaId failed", e)
-                _errorMessage.value = e.message.orEmpty()
+                rollBack(backup, "Couldn't remove item. Try again.")
             }
         }
     }
 
-    // moves an item to another tab. it disappears from this one on the reload, because
-    // the request we send asks for one status at a time.
+    // same idea for moving an item to another tab. the tab we're looking at only holds one
+    // status, so a change means the row leaves this list right away ; PUT runs after.
     fun updateStatus(mediaId: Int, newStatus: LibraryStatus) {
+        val backup = _libraryItems.value.find { it.mediaId == mediaId } ?: return
+        if (backup.status == newStatus) return          // nothing would change
+        _libraryItems.value = _libraryItems.value.filter { it.mediaId != mediaId }
+
         viewModelScope.launch {
             try {
                 libraryRepository.updateStatus(mediaId, newStatus)
-                loadLibrary()
             } catch (e: Exception) {
                 Log.w("Library", "PUT /library/$mediaId failed", e)
-                _errorMessage.value = e.message.orEmpty()
+                rollBack(backup, "Couldn't update status. Try again.")
             }
         }
     }
+
+    // puts an item back after a failed request. it lands at the end rather than where it
+    // was, which the handout says is fine, and then the snackbar explains what happened.
+    private fun rollBack(item: LibraryItem, message: String) {
+        _libraryItems.value = _libraryItems.value + item
+        _actionError.value = message
+    }
+
+    // the screen calls this once it has shown the snackbar, so the same message doesn't
+    // come back the next time something recomposes.
+    fun clearActionError() {
+        _actionError.value = null
+    }
+
     fun updateFilter(status: LibraryStatus) {
         _filterState.value = status
         loadLibrary()          // different tab, different request

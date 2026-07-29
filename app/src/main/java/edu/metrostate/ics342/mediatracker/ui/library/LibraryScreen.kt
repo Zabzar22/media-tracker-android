@@ -41,7 +41,19 @@ fun LibraryScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val selectedStatus by viewModel.filterState.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val actionError by viewModel.actionError.collectAsState()
 
+    // a tap that got rolled back shows up down here instead of taking over the screen.
+    // clearing it afterwards keeps it from showing again on the next recomposition.
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(actionError) {
+        actionError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearActionError()
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         TopAppBar(
             title = { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.library_title)) },
@@ -156,6 +168,12 @@ fun LibraryScreen(
                 )
             }
         }
+    }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier  = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 

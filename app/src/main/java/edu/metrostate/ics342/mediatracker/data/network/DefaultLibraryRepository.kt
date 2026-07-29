@@ -40,11 +40,13 @@ class DefaultLibraryRepository(
         if (!response.isSuccessful) throw HttpException(response)
     }
 
-    // Add the item to the library. Throws on any non-2xx (including 409 if it somehow
-    // got added already) so the ViewModel can react.
-    suspend fun addToLibrary(mediaId: Int, status: LibraryStatus): LibraryItem {
+    // add the item to the library. a 409 means it's already in there, which is what we
+    // wanted anyway, so we let that one through like favorites does. nothing is returned
+    // because the button already flipped itself before this ran.
+    suspend fun addToLibrary(mediaId: Int, status: LibraryStatus) {
         val response = api.addToLibrary(AddLibraryItemRequest(mediaId, status))
-        if (!response.isSuccessful) throw HttpException(response)
-        return response.body() ?: throw HttpException(response)
+        if (!response.isSuccessful && response.code() != 409) {
+            throw HttpException(response)
+        }
     }
 }

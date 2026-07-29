@@ -25,22 +25,29 @@ sealed interface MediaDetailUiState {
         val media: Media,
         val libraryStatus: LibraryStatus? = null,   // null = not in the library yet
         val reviews: List<Review> = emptyList(),
-        val isUpdatingLibrary: Boolean = false,      // true while POST /library is running
-        val isFavorite: Boolean = false,             // already in favorites?
-        val isUpdatingFavorite: Boolean = false      // true while POST /favorites is running
+        val isFavorite: Boolean = false             // already in favorites?
     ) : MediaDetailUiState
     data object NotFound : MediaDetailUiState
     data class Error(val message: String) : MediaDetailUiState
 }
 
-class MediaDetailViewModel : ViewModel() {
-    private val repository = DefaultMediaRepository()
-    private val libraryRepository = DefaultLibraryRepository()
-    private val reviewRepository = DefaultReviewRepository()
-    private val favoriteRepository = DefaultFavoriteRepository()
+// the four repositories are constructor parameters with defaults now, same reason as the
+// library view model ; a test can pass fakes in. @JvmOverloads keeps the no-argument
+// constructor that viewModel() calls.
+class MediaDetailViewModel @JvmOverloads constructor(
+    private val repository: DefaultMediaRepository = DefaultMediaRepository(),
+    private val libraryRepository: DefaultLibraryRepository = DefaultLibraryRepository(),
+    private val reviewRepository: DefaultReviewRepository = DefaultReviewRepository(),
+    private val favoriteRepository: DefaultFavoriteRepository = DefaultFavoriteRepository()
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<MediaDetailUiState>(MediaDetailUiState.Loading)
     val uiState: StateFlow<MediaDetailUiState> = _uiState.asStateFlow()
+
+    // a tap that failed and got undone. goes in a snackbar, not the error state, because
+    // the page itself is still fine ; only the button had to go back.
+    private val _actionError = MutableStateFlow<String?>(null)
+    val actionError: StateFlow<String?> = _actionError.asStateFlow()
 
     fun load(mediaId: Int) {
         _uiState.value = MediaDetailUiState.Loading
@@ -81,47 +88,50 @@ class MediaDetailViewModel : ViewModel() {
         }
     }
 
-    // "+ Want To" tap. Adds the item as want_to. Guards against a double-tap: if a request
-    // is already in flight, or it's already in the library, this does nothing.
+    // "+ Want To" tap. optimistic ; the button says Want To right away and POST /library
+    // runs after. does nothing if it's already in the library.
     fun addToWantTo(mediaId: Int) {
         val current = _uiState.value
         if (current !is MediaDetailUiState.Success) return
-        if (current.isUpdatingLibrary || current.libraryStatus != null) return
+        if (current.libraryStatus != null) return
 
-        _uiState.value = current.copy(isUpdatingLibrary = true)
+        _uiState.value = current.copy(libraryStatus = LibraryStatus.WANT_TO)
         viewModelScope.launch {
-            _uiState.value = try {
-                val item = libraryRepository.addToLibrary(mediaId, LibraryStatus.WANT_TO)
-                current.copy(libraryStatus = item.status, isUpdatingLibrary = false)
+            try {
+                libraryRepository.addToLibrary(mediaId, LibraryStatus.WANT_TO)
             } catch (e: Exception) {
                 Log.w("MediaDetail", "POST /library failed", e)
-                current.copy(isUpdatingLibrary = false)   // let them try again
+                // put the button back the way it was and say why.
+                val latest = _uiState.value as? MediaDetailUiState.Success ?: return@launch
+                _uiState.value = latest.copy(libraryStatus = null)
+                _actionError.value = "Couldn't add to library. Try again."
             }
         }
     }
 
-    // the "Save" tap ; it's a toggle, so tapping it again takes the item back out of
-    // favorites. there's nowhere else in the app to un-save something. only guard is
-    // ignoring taps while a request is already running.
+    // the "Save" tap ; a toggle, so tapping again takes the item back out of favorites.
+    // the heart flips first and the request follows, so a failure has to flip it back.
     fun toggleFavorite(mediaId: Int) {
         val current = _uiState.value
         if (current !is MediaDetailUiState.Success) return
-        if (current.isUpdatingFavorite) return
 
-        _uiState.value = current.copy(isUpdatingFavorite = true)
+        val wasFavorite = current.isFavorite
+        _uiState.value = current.copy(isFavorite = !wasFavorite)
         viewModelScope.launch {
-            _uiState.value = try {
-                if (current.isFavorite) {
-                    favoriteRepository.removeFavorite(mediaId)
-                    current.copy(isFavorite = false, isUpdatingFavorite = false)
-                } else {
-                    favoriteRepository.addFavorite(mediaId)
-                    current.copy(isFavorite = true, isUpdatingFavorite = false)
-                }
+            try {
+                if (wasFavorite) favoriteRepository.removeFavorite(mediaId)
+                else             favoriteRepository.addFavorite(mediaId)
             } catch (e: Exception) {
                 Log.w("MediaDetail", "favorites toggle failed", e)
-                current.copy(isUpdatingFavorite = false)   // let them try again
+                val latest = _uiState.value as? MediaDetailUiState.Success ?: return@launch
+                _uiState.value = latest.copy(isFavorite = wasFavorite)
+                _actionError.value = "Couldn't update saved items. Try again."
             }
         }
+    }
+
+    // the screen calls this after showing the snackbar so it doesn't come back.
+    fun clearActionError() {
+        _actionError.value = null
     }
 }
