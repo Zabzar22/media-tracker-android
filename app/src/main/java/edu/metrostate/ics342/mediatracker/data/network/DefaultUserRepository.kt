@@ -54,8 +54,15 @@ class DefaultUserRepository(
                 200 -> {
                     val body = response.body()
                     if (body != null) {
+                        // Wipe first. A new login is a new person, so any profile cached
+                        // from a previous session has to go - otherwise the next screen
+                        // that asks "is this my review?" would answer for the last account.
+                        TokenStore.clear()
                         TokenStore.accessToken = body.accessToken
                         TokenStore.refreshToken = body.refreshToken
+                        // The login response already tells us who we are, so we keep it
+                        // here instead of making a separate call for it later.
+                        TokenStore.currentUser = body.user
                         LoginResult.Success
                     } else {
                         LoginResult.UnknownError

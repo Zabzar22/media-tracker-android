@@ -10,11 +10,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,21 +21,21 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import kotlin.math.roundToInt
 import edu.metrostate.ics342.mediatracker.R
 import edu.metrostate.ics342.mediatracker.data.model.LibraryStatus
 import edu.metrostate.ics342.mediatracker.data.model.Media
 import edu.metrostate.ics342.mediatracker.data.model.Review
-import edu.metrostate.ics342.mediatracker.data.model.UserProfile
 import edu.metrostate.ics342.mediatracker.data.model.creatorCredit
 import edu.metrostate.ics342.mediatracker.data.model.iconRes
 import edu.metrostate.ics342.mediatracker.data.model.typeStat
+import edu.metrostate.ics342.mediatracker.ui.components.StarRatingDisplay
 
 // Week 8 - hooked this up to the real API. The view model fetches the item, its library
 // status and its reviews instead of reading the fake repo. I kept the top bar outside the
@@ -58,6 +55,14 @@ fun MediaDetailScreen(
     // call in LaunchedEffect instead of straight in the body stops it from re-running
     // GET /media/{id} on every recomposition, which was making it loop.
     LaunchedEffect(mediaId) { viewModel.load(mediaId) }
+
+    // Coming back from Write Review lands us on this screen again, but the LaunchedEffect
+    // above does NOT run a second time - this screen never left the back stack, so as far
+    // as Compose is concerned mediaId never changed. Without this line a review you just
+    // posted wouldn't show up until you left the screen and came back.
+    // ON_RESUME fires every time the screen comes to the front, and refresh() quietly does
+    // nothing if the page hasn't loaded yet, so it can't double up on the way in.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh(mediaId) }
 
     // a button that flipped back gets a snackbar down here, so the page stays up.
     val snackbarHostState = remember { SnackbarHostState() }
@@ -120,6 +125,7 @@ fun MediaDetailScreen(
                     mediaId = mediaId,
                     libraryStatus = state.libraryStatus,
                     reviews = state.reviews,
+                    currentUserId = state.currentUserId,
                     isFavorite = state.isFavorite,
                     onAddToLibrary = { viewModel.addToWantTo(mediaId) },
                     onToggleFavorite = { viewModel.toggleFavorite(mediaId) },
@@ -143,6 +149,7 @@ private fun MediaDetailContent(
     mediaId: Int,
     libraryStatus: LibraryStatus?,
     reviews: List<Review>,
+    currentUserId: String?,
     isFavorite: Boolean,
     onAddToLibrary: () -> Unit,
     onToggleFavorite: () -> Unit,
@@ -169,7 +176,7 @@ private fun MediaDetailContent(
         // Rating row: stars + numeric average + count.
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            StarRow(media.averageRating)
+            StarRatingDisplay(media.averageRating)
             Spacer(Modifier.width(6.dp))
             Text("%.1f".format(media.averageRating),
                 style = MaterialTheme.typography.titleSmall,
@@ -286,7 +293,9 @@ private fun MediaDetailContent(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
         } else {
             reviews.forEach { review ->
-                ReviewCard(review)
+                // the view model already moved ours to the front ; this just says which
+                // one it is. next week this is where the Edit button goes.
+                ReviewCard(review, isMine = review.userId == currentUserId)
                 Spacer(Modifier.height(12.dp))
             }
         }
@@ -312,30 +321,6 @@ private fun CoverArt(media: Media) {
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-    }
-}
-
-/** Row of five amber stars. A star fills at .6 and above (4.6 -> 5, 4.5/4.4 -> 4). */
-@Composable
-private fun StarRow(rating: Float) {
-    // Round to the nearest half-star so 4.5 shows four full stars + one half,
-    // instead of being floored to four. Working in half-steps (0..10) also absorbs
-    // float noise like 4.4999. Each position is full, half, or empty.
-    val halves = (rating * 2).roundToInt().coerceIn(0, 10)
-    Row {
-        for (index in 0 until 5) {
-            val star = when {
-                halves >= (index + 1) * 2 -> Icons.Filled.Star          // full star
-                halves >= index * 2 + 1   -> Icons.Filled.StarHalf      // half star
-                else                      -> Icons.Outlined.StarBorder  // empty star
-            }
-            Icon(
-                imageVector = star,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier.size(16.dp)
             )
         }
     }
@@ -371,7 +356,7 @@ private fun StatBox(label: String, value: String, modifier: Modifier = Modifier)
 
 /** A single review: avatar, username, timestamp, stars, text. */
 @Composable
-private fun ReviewCard(review: Review) {
+private fun ReviewCard(review: Review, isMine: Boolean = false) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -394,15 +379,23 @@ private fun ReviewCard(review: Review) {
                 Row(Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically) {
-                    Text("@${review.user?.username ?: "user"}",
-                        style = MaterialTheme.typography.titleSmall)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("@${review.user?.username ?: "user"}",
+                            style = MaterialTheme.typography.titleSmall)
+                        if (isMine) {
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.detail_your_review),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                     // createdAt is a full ISO timestamp now that it's real data
                     // ("2026-07-14T18:22:05Z") - take(10) keeps just the date part.
                     Text(review.createdAt.take(10), style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(4.dp))
-                StarRow(review.rating.toFloat())
+                StarRatingDisplay(review.rating.toFloat())
                 if (!review.reviewText.isNullOrBlank()) {
                     Spacer(Modifier.height(4.dp))
                     Text(review.reviewText, style = MaterialTheme.typography.bodyMedium,

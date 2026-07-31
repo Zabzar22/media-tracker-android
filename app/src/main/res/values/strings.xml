@@ -144,6 +144,21 @@
     <string name="detail_not_found">Media not found.</string>
     <string name="detail_error">Couldn\'t load this item.</string>
     <string name="detail_no_reviews">No reviews yet. Be the first!</string>
+    <string name="detail_your_review">Your review</string>
     <string name="action_retry">Retry</string>
+
+    <!-- Write Review -->
+    <string name="review_title">Write a Review</string>
+    <string name="review_rating_label">Your rating</string>
+    <string name="review_rating_hint">Tap a star to rate</string>
+    <string name="review_rating_value">%1$d of %2$d stars</string>
+    <string name="review_star_description">%1$d star</string>
+    <string name="review_text_label">Your review (optional)</string>
+    <string name="review_text_placeholder">What did you think?</string>
+    <string name="review_text_counter">%1$d / %2$d</string>
+    <string name="review_share_to_feed">Share to activity feed</string>
+    <string name="review_post_button">Post Review</string>
+    <string name="review_error_already_reviewed">You\'ve already reviewed this.</string>
+    <string name="review_error_generic">Couldn\'t post your review. Try again.</string>
 
 </resources>

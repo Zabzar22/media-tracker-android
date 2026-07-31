@@ -11,6 +11,7 @@ import edu.metrostate.ics342.mediatracker.data.network.DefaultLibraryRepository
 import edu.metrostate.ics342.mediatracker.data.network.DefaultMediaRepository
 import edu.metrostate.ics342.mediatracker.data.network.DefaultReviewRepository
 import edu.metrostate.ics342.mediatracker.data.network.MediaNotFoundException
+import edu.metrostate.ics342.mediatracker.data.network.TokenStore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +26,10 @@ sealed interface MediaDetailUiState {
         val media: Media,
         val libraryStatus: LibraryStatus? = null,   // null = not in the library yet
         val reviews: List<Review> = emptyList(),
-        val isFavorite: Boolean = false             // already in favorites?
+        val isFavorite: Boolean = false,            // already in favorites?
+        // who we are, so a review card can tell "yours" from everyone else's. comes from
+        // the login response, so it's already known by the time we get here.
+        val currentUserId: String? = null
     ) : MediaDetailUiState
     data object NotFound : MediaDetailUiState
     data class Error(val message: String) : MediaDetailUiState
@@ -61,6 +65,10 @@ class MediaDetailViewModel @JvmOverloads constructor(
             // asks "have I favorited this?" so the Save button starts out honest.
             val favoriteCall = async { runCatching { favoriteRepository.getFavorite(mediaId) } }
 
+            // who we are. no request for this one - POST /tokens handed us the profile when
+            // we logged in, so it's just sitting in TokenStore.
+            val currentUserId = TokenStore.currentUserId
+
             // Only the media call decides whether we have a screen at all.
             val media = mediaCall.await().getOrElse { e ->
                 Log.w("MediaDetail", "GET /media/$mediaId failed", e)
@@ -84,8 +92,57 @@ class MediaDetailViewModel @JvmOverloads constructor(
                 .onFailure { Log.w("MediaDetail", "GET /favorites/$mediaId failed", it) }
                 .getOrNull() != null
 
-            _uiState.value = MediaDetailUiState.Success(media, status, reviews, isFavorite = isFavorite)
+            _uiState.value = MediaDetailUiState.Success(
+                media         = media,
+                libraryStatus = status,
+                reviews       = mineFirst(reviews, currentUserId),
+                isFavorite    = isFavorite,
+                currentUserId = currentUserId
+            )
         }
+    }
+
+    // asks for the item and its reviews again, without the loading spinner. this is what
+    // makes a review you just posted show up, since coming back from Write Review doesn't
+    // re-run load(). we ask for the media too because a new review changes the header
+    // numbers as well ; the count goes up and your stars move the average.
+    //
+    // if the page hasn't loaded yet there's nothing to refresh, so we leave. that also
+    // stops a second set of requests going out while load() is still running.
+    fun refresh(mediaId: Int) {
+        val current = _uiState.value as? MediaDetailUiState.Success ?: return
+        viewModelScope.launch {
+            // both at once, same as load() does above.
+            val mediaCall   = async { runCatching { repository.getMedia(mediaId) } }
+            val reviewsCall = async { runCatching { reviewRepository.getReviews(mediaId) } }
+
+            // if a call fails we keep what's already on screen. the page was fine a second
+            // ago, so slightly stale numbers beat blanking it out.
+            val media = mediaCall.await()
+                .onFailure { Log.w("MediaDetail", "refresh GET /media/$mediaId failed", it) }
+                .getOrDefault(current.media)
+            val reviews = reviewsCall.await()
+                .onFailure { Log.w("MediaDetail", "refresh GET /reviews?mediaId=$mediaId failed", it) }
+                .getOrDefault(current.reviews)
+
+            // read the state again instead of reusing `current` ; a Save or Want To tap
+            // could have happened while we were waiting, and that should stick.
+            val latest = _uiState.value as? MediaDetailUiState.Success ?: return@launch
+            _uiState.value = latest.copy(
+                media   = media,
+                reviews = mineFirst(reviews, latest.currentUserId)
+            )
+        }
+    }
+
+    // Puts your own review at the top and leaves everyone else in the order the server sent
+    // (newest first). Two filters rather than a sort so it's obvious what comes out, and so
+    // the rest of the list keeps its order exactly.
+    private fun mineFirst(reviews: List<Review>, currentUserId: String?): List<Review> {
+        if (currentUserId == null) return reviews
+        val mine   = reviews.filter { it.userId == currentUserId }
+        val theirs = reviews.filter { it.userId != currentUserId }
+        return mine + theirs
     }
 
     // "+ Want To" tap. optimistic ; the button says Want To right away and POST /library
