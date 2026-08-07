@@ -47,6 +47,13 @@ extensions.configure<ApplicationExtension> {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        // Unit tests run on the JVM, where android.util.Log doesn't exist - by default any
+        // call to it throws "not mocked". Our view models log inside their catch blocks, so
+        // that turned every error-path test into a crash before the rollback could run.
+        // Returning defaults makes Log.w a no-op instead.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 kotlin {

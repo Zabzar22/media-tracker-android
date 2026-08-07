@@ -28,7 +28,14 @@ import edu.metrostate.ics342.mediatracker.data.model.iconRes
 import edu.metrostate.ics342.mediatracker.ui.components.StarRatingRow
 
 // The review form. Rate the thing, optionally say why, and POST /reviews. The rating is
-// required and the text isn't, so the Post button stays disabled until a star is picked.
+// required and the text isn't, so the Save button stays disabled until a star is picked.
+//
+// Week 12: this is also the edit screen. If the view model finds a review you already
+// wrote, the form opens with it filled in, the wording changes ("Edit Your Review" /
+// "Save Changes"), a Delete button appears, and saving sends a PUT instead of a POST.
+// The Edit button on Media Detail navigates here exactly the same way + Write Review does
+// - there is nothing to pass along, because the screen works out for itself which one
+// this is.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WriteReviewScreen(
@@ -41,6 +48,11 @@ fun WriteReviewScreen(
     val reviewText  by viewModel.reviewText.collectAsState()
     val shareToFeed by viewModel.shareToFeed.collectAsState()
     val submitState by viewModel.submitState.collectAsState()
+    val isLoading   by viewModel.isLoading.collectAsState()
+    val editingReviewId by viewModel.editingReviewId.collectAsState()
+
+    // One flag the whole screen reads off. An id to edit = we're editing; null = new review.
+    val isEditing = editingReviewId != null
 
     // Same reason as the detail screen: in the body this would re-fetch on every
     // recomposition. Keyed on mediaId so it runs once per item.
@@ -48,22 +60,27 @@ fun WriteReviewScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Whether the "are you sure?" dialog is up. It's remembered by the screen, not the view
+    // model, because it's only ever about what's drawn - nothing is sent until it's confirmed.
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     // The error text is looked up out here rather than inside the effect below. Pulling a
     // string out of LocalContext works, but it won't re-read if the device language changes
     // - stringResource does, which is why Compose flags the LocalContext version.
     val errorState   = submitState as? WriteReviewViewModel.SubmitState.Error
     val errorMessage = if (errorState != null) stringResource(errorState.messageRes) else null
 
-    // Posting is async, so leaving the screen is driven by the *result*, not by the tap.
+    // Saving is async, so leaving the screen is driven by the *result*, not by the tap.
     // Doing this in the button's onClick would navigate back before the server had
-    // answered, and a failed post would look like it worked.
+    // answered, and a failed save would look like it worked. Deleting lands here too - once
+    // the review is gone there's nothing left on this form to look at.
     LaunchedEffect(submitState) {
         if (submitState is WriteReviewViewModel.SubmitState.Success) onNavigateBack()
     }
 
     // Separate effect because it's keyed on the message instead of the whole state.
     // clearError() puts us back to Idle once it's shown, so the snackbar appears once and
-    // the Post button becomes usable again for a retry.
+    // the Save button becomes usable again for a retry.
     LaunchedEffect(errorMessage) {
         if (errorMessage != null) {
             snackbarHostState.showSnackbar(errorMessage)
@@ -73,10 +90,35 @@ fun WriteReviewScreen(
 
     val isSubmitting = submitState is WriteReviewViewModel.SubmitState.Submitting
 
+    // Deleting can't be undone, so it asks first. Same AlertDialog the library screen uses
+    // for changing status, just with the destructive action in red.
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.review_delete_confirm_title)) },
+            text  = { Text(stringResource(R.string.review_delete_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = { showDeleteDialog = false; viewModel.delete() }) {
+                    Text(stringResource(R.string.review_delete_confirm_button),
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopAppBar(
-                title = { Text(stringResource(R.string.review_title)) },
+                title = {
+                    Text(stringResource(
+                        if (isEditing) R.string.review_title_edit else R.string.review_title
+                    ))
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack,
@@ -84,6 +126,16 @@ fun WriteReviewScreen(
                     }
                 }
             )
+
+            // Wait for the "have I already reviewed this?" answer before drawing anything.
+            // Without this the stars show up empty for a moment and then fill themselves in,
+            // which reads as the app losing the review you're trying to edit.
+            if (isLoading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+                return@Column
+            }
 
             Column(
                 modifier = Modifier
@@ -147,24 +199,30 @@ fun WriteReviewScreen(
 
                 // The server already defaults this to true, but the checkbox means the
                 // request says what the user chose instead of what we happened to omit.
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked         = shareToFeed,
-                        onCheckedChange = viewModel::onShareToFeedChange,
-                        enabled         = !isSubmitting
-                    )
-                    Text(stringResource(R.string.review_share_to_feed),
-                        style = MaterialTheme.typography.bodyMedium)
+                //
+                // Hidden while editing: PUT /reviews/{id} doesn't take shareToFeed. The feed
+                // post was made when the review was first written, and an edit doesn't
+                // re-share it - so a checkbox here would be a promise we can't keep.
+                if (!isEditing) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked         = shareToFeed,
+                            onCheckedChange = viewModel::onShareToFeedChange,
+                            enabled         = !isSubmitting
+                        )
+                        Text(stringResource(R.string.review_share_to_feed),
+                            style = MaterialTheme.typography.bodyMedium)
+                    }
                 }
 
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick  = { viewModel.submit(mediaId) },
-                    // Rating is the one required field, so no star means nothing to post.
+                    // Rating is the one required field, so no star means nothing to save.
                     enabled  = rating >= WriteReviewViewModel.MIN_RATING && !isSubmitting,
                     modifier = Modifier.fillMaxWidth(),
                     shape    = RoundedCornerShape(20.dp)
@@ -177,7 +235,24 @@ fun WriteReviewScreen(
                         )
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text(stringResource(R.string.review_post_button))
+                    Text(stringResource(
+                        if (isEditing) R.string.review_save_button
+                        else           R.string.review_post_button
+                    ))
+                }
+
+                // Only there when there's something to delete. Text button in red rather
+                // than a second filled button, so it doesn't compete with Save.
+                if (isEditing) {
+                    Spacer(Modifier.height(4.dp))
+                    TextButton(
+                        onClick  = { showDeleteDialog = true },
+                        enabled  = !isSubmitting,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.review_delete_button),
+                            color = MaterialTheme.colorScheme.error)
+                    }
                 }
 
                 Spacer(Modifier.height(24.dp))

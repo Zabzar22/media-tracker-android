@@ -10,6 +10,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
@@ -125,11 +127,13 @@ fun MediaDetailScreen(
                     mediaId = mediaId,
                     libraryStatus = state.libraryStatus,
                     reviews = state.reviews,
+                    reviewsFailed = state.reviewsFailed,
                     currentUserId = state.currentUserId,
                     isFavorite = state.isFavorite,
                     onAddToLibrary = { viewModel.addToWantTo(mediaId) },
                     onToggleFavorite = { viewModel.toggleFavorite(mediaId) },
-                    onWriteReview = onWriteReview
+                    onWriteReview = onWriteReview,
+                    onDeleteReview = { reviewId -> viewModel.deleteReview(mediaId, reviewId) }
                 )
         }
     }
@@ -149,11 +153,13 @@ private fun MediaDetailContent(
     mediaId: Int,
     libraryStatus: LibraryStatus?,
     reviews: List<Review>,
+    reviewsFailed: Boolean,
     currentUserId: String?,
     isFavorite: Boolean,
     onAddToLibrary: () -> Unit,
     onToggleFavorite: () -> Unit,
-    onWriteReview: (Int) -> Unit
+    onWriteReview: (Int) -> Unit,
+    onDeleteReview: (Int) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -272,6 +278,11 @@ private fun MediaDetailContent(
                 Modifier.weight(1f))
         }
 
+        // one review per person per item, so this is either our review or null. null means
+        // the Write Review button is still worth showing ; a review means it isn't, and
+        // Edit takes its place down on the card instead.
+        val myReview = reviews.firstOrNull { it.userId == currentUserId }
+
         // Reviews header. Counts with the server's reviewCount, not reviews.size — the
         // list only holds the first 20, so the size would under-report a popular item.
         Spacer(Modifier.height(24.dp))
@@ -280,22 +291,48 @@ private fun MediaDetailContent(
             verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.detail_reviews, media.reviewCount),
                 style = MaterialTheme.typography.titleMedium)
-            TextButton(onClick = { onWriteReview(mediaId) }) {
-                Text(stringResource(R.string.detail_write_review))
+            if (myReview == null) {
+                TextButton(onClick = { onWriteReview(mediaId) }) {
+                    Text(stringResource(R.string.detail_write_review))
+                }
             }
         }
 
         Spacer(Modifier.height(8.dp))
+        // three ways this can go: the list, nothing to show, or the request having failed.
+        // an empty list on its own doesn't tell those last two apart, which is why the view
+        // model passes reviewsFailed along - "be the first!" is the wrong thing to say to
+        // someone whose wifi dropped.
         if (reviews.isEmpty()) {
-            Text(stringResource(R.string.detail_no_reviews),
+            Text(
+                if (reviewsFailed) stringResource(R.string.detail_reviews_error)
+                else               stringResource(R.string.detail_no_reviews),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
+            // the header button is up past the About section and the stat grid by now, so
+            // the empty state offers its own way in rather than making you scroll back.
+            if (!reviewsFailed) {
+                Button(onClick = { onWriteReview(mediaId) },
+                    shape = RoundedCornerShape(20.dp)) {
+                    Text(stringResource(R.string.detail_write_review_empty))
+                }
+            }
         } else {
             reviews.forEach { review ->
-                // the view model already moved ours to the front ; this just says which
-                // one it is. next week this is where the Edit button goes.
-                ReviewCard(review, isMine = review.userId == currentUserId)
+                // the view model already moved ours to the front. ours is also the only one
+                // with an Edit button - the server would 403 an edit of anyone else's, and
+                // the button not being there is a nicer way to learn that.
+                val isMine = review.userId == currentUserId
+                ReviewCard(
+                    review   = review,
+                    isMine   = isMine,
+                    onEdit   = if (isMine) ({ onWriteReview(mediaId) }) else null,
+                    // review.id, not mediaId - the two sit next to each other on a Review
+                    // and sending the wrong one deletes nothing (or somebody else's).
+                    onDelete = if (isMine) ({ onDeleteReview(review.id) }) else null
+                )
                 Spacer(Modifier.height(12.dp))
             }
         }
@@ -354,9 +391,49 @@ private fun StatBox(label: String, value: String, modifier: Modifier = Modifier)
     }
 }
 
-/** A single review: avatar, username, timestamp, stars, text. */
+/**
+ * A single review: avatar, username, timestamp, stars, text.
+ *
+ * [onEdit] and [onDelete] are both null for everyone else's reviews, which is how the two
+ * buttons know to stay away — the server would 403 either one on somebody else's review.
+ *
+ * [onEdit] opens the same Write Review screen the + button does; that screen looks up the
+ * review itself, so there's nothing to hand it here. [onDelete] only runs once the confirm
+ * dialog below has been agreed to, so it can delete straight away without asking again.
+ */
 @Composable
-private fun ReviewCard(review: Review, isMine: Boolean = false) {
+private fun ReviewCard(
+    review: Review,
+    isMine: Boolean = false,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
+) {
+    // Lives here rather than in the view model: nothing is sent until it's confirmed, so
+    // it's only ever about what's drawn. remember keys off this card, so opening one card's
+    // dialog can't open another's.
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // Deleting can't be undone, so it asks first — same AlertDialog shape the library
+    // screen uses, with the destructive action in red.
+    if (showDeleteDialog && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.review_delete_confirm_title)) },
+            text  = { Text(stringResource(R.string.review_delete_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = { showDeleteDialog = false; onDelete() }) {
+                    Text(stringResource(R.string.review_delete_confirm_button),
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -400,6 +477,52 @@ private fun ReviewCard(review: Review, isMine: Boolean = false) {
                     Spacer(Modifier.height(4.dp))
                     Text(review.reviewText, style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                // Your own review gets both buttons, side by side. Delete used to live on
+                // the edit screen, which meant deleting something took two screens and a
+                // detour through a form you weren't going to save - so it's out here now,
+                // next to the review it deletes.
+                //
+                // They're outlined buttons rather than quiet text links because between
+                // them they're replacing the + Write Review button that used to be up in
+                // the header ; if they don't read as buttons it just looks like the button
+                // disappeared.
+                if (onEdit != null || onDelete != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (onEdit != null) {
+                            OutlinedButton(
+                                onClick = onEdit,
+                                shape = RoundedCornerShape(20.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Outlined.Edit, contentDescription = null,
+                                    modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.detail_edit_review),
+                                    style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                        if (onDelete != null) {
+                            // red text and a red outline, so the one that can't be undone
+                            // doesn't look identical to the one that can.
+                            OutlinedButton(
+                                onClick = { showDeleteDialog = true },
+                                shape = RoundedCornerShape(20.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                            ) {
+                                Icon(Icons.Outlined.Delete, contentDescription = null,
+                                    modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.detail_delete_review),
+                                    style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                    }
                 }
             }
         }

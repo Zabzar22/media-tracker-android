@@ -26,6 +26,10 @@ sealed interface MediaDetailUiState {
         val media: Media,
         val libraryStatus: LibraryStatus? = null,   // null = not in the library yet
         val reviews: List<Review> = emptyList(),
+        // GET /reviews failed while the rest of the page loaded fine. Without this an
+        // empty list would read as "no reviews yet", which is a different thing and the
+        // wrong thing to tell someone whose connection dropped.
+        val reviewsFailed: Boolean = false,
         val isFavorite: Boolean = false,            // already in favorites?
         // who we are, so a review card can tell "yours" from everyone else's. comes from
         // the login response, so it's already known by the time we get here.
@@ -83,9 +87,9 @@ class MediaDetailViewModel @JvmOverloads constructor(
             val status = libraryCall.await()
                 .onFailure { Log.w("MediaDetail", "GET /library/$mediaId failed", it) }
                 .getOrNull()?.status
-            val reviews = reviewsCall.await()
+            val reviewsResult = reviewsCall.await()
                 .onFailure { Log.w("MediaDetail", "GET /reviews?mediaId=$mediaId failed", it) }
-                .getOrElse { emptyList() }
+            val reviews = reviewsResult.getOrElse { emptyList() }
 
             // null back from the repo means a 404, which just means "not favorited".
             val isFavorite = favoriteCall.await()
@@ -96,6 +100,7 @@ class MediaDetailViewModel @JvmOverloads constructor(
                 media         = media,
                 libraryStatus = status,
                 reviews       = mineFirst(reviews, currentUserId),
+                reviewsFailed = reviewsResult.isFailure,
                 isFavorite    = isFavorite,
                 currentUserId = currentUserId
             )
@@ -121,16 +126,17 @@ class MediaDetailViewModel @JvmOverloads constructor(
             val media = mediaCall.await()
                 .onFailure { Log.w("MediaDetail", "refresh GET /media/$mediaId failed", it) }
                 .getOrDefault(current.media)
-            val reviews = reviewsCall.await()
+            val reviewsResult = reviewsCall.await()
                 .onFailure { Log.w("MediaDetail", "refresh GET /reviews?mediaId=$mediaId failed", it) }
-                .getOrDefault(current.reviews)
+            val reviews = reviewsResult.getOrDefault(current.reviews)
 
             // read the state again instead of reusing `current` ; a Save or Want To tap
             // could have happened while we were waiting, and that should stick.
             val latest = _uiState.value as? MediaDetailUiState.Success ?: return@launch
             _uiState.value = latest.copy(
-                media   = media,
-                reviews = mineFirst(reviews, latest.currentUserId)
+                media         = media,
+                reviews       = mineFirst(reviews, latest.currentUserId),
+                reviewsFailed = reviewsResult.isFailure
             )
         }
     }
@@ -183,6 +189,47 @@ class MediaDetailViewModel @JvmOverloads constructor(
                 val latest = _uiState.value as? MediaDetailUiState.Success ?: return@launch
                 _uiState.value = latest.copy(isFavorite = wasFavorite)
                 _actionError.value = "Couldn't update saved items. Try again."
+            }
+        }
+    }
+
+    // Delete straight from the review card, once its confirm dialog has been agreed to.
+    // Optimistic like the two above: the card goes away on the tap and DELETE runs after,
+    // so a failure has to put it back.
+    //
+    // reviewId is the Review's own id, not the mediaId - see DefaultReviewRepository.
+    fun deleteReview(mediaId: Int, reviewId: Int) {
+        val current = _uiState.value
+        if (current !is MediaDetailUiState.Success) return
+        // keep a copy so a failed request can restore it, same as the library screen does.
+        val removed = current.reviews.find { it.id == reviewId } ?: return
+
+        _uiState.value = current.copy(
+            reviews = current.reviews.filter { it.id != reviewId },
+            // the header count is the server's number, so it doesn't drop on its own.
+            // coerce because a stale count could already be 0 and we'd go negative.
+            media   = current.media.copy(
+                reviewCount = (current.media.reviewCount - 1).coerceAtLeast(0)
+            )
+        )
+
+        viewModelScope.launch {
+            try {
+                reviewRepository.deleteReview(reviewId)
+                // our stars were part of the average, and only the server knows what it is
+                // now, so ask again rather than trying to work it out here.
+                refresh(mediaId)
+            } catch (e: Exception) {
+                Log.w("MediaDetail", "DELETE /reviews/$reviewId failed", e)
+                val latest = _uiState.value as? MediaDetailUiState.Success ?: return@launch
+                _uiState.value = latest.copy(
+                    // mineFirst puts it back at the top where it was, since it's ours.
+                    reviews = mineFirst(latest.reviews + removed, latest.currentUserId),
+                    media   = latest.media.copy(
+                        reviewCount = latest.media.reviewCount + 1
+                    )
+                )
+                _actionError.value = "Couldn't delete your review. Try again."
             }
         }
     }
