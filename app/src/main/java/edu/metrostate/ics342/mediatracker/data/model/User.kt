@@ -1,5 +1,9 @@
 package edu.metrostate.ics342.mediatracker.data.model
 
+import kotlinx.serialization.Serializable
+
+// @Serializable because a Review has the reviewer's profile nested inside it.
+@Serializable
 data class UserProfile(
     val id: String,
     val email: String,

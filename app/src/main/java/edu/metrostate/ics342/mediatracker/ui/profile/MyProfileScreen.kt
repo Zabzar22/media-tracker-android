@@ -13,12 +13,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import edu.metrostate.ics342.mediatracker.data.model.creatorCredit
+import edu.metrostate.ics342.mediatracker.data.model.iconRes
+import edu.metrostate.ics342.mediatracker.ui.components.StatusBadge
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,8 +33,9 @@ fun MyProfileScreen(
     onSettingsClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
-    val user    by viewModel.currentUser.collectAsState()
-    val library by viewModel.libraryPreview.collectAsState()
+    val user      by viewModel.currentUser.collectAsStateWithLifecycle()
+    val library   by viewModel.libraryPreview.collectAsState()
+    val favorites by viewModel.favorites.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -84,8 +91,7 @@ fun MyProfileScreen(
             }
 
             Spacer(Modifier.height(12.dp))
-            Text(u.displayName, style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold)
+            Text(u.displayName, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(2.dp))
             Text("@${u.username}", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -112,7 +118,8 @@ fun MyProfileScreen(
 
             OutlinedButton(
                 onClick  = onEditProfile,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape    = RoundedCornerShape(20.dp)
             ) { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.profile_edit_button)) }
 
             Spacer(Modifier.height(24.dp))
@@ -143,19 +150,83 @@ fun MyProfileScreen(
                             Surface(color = MaterialTheme.colorScheme.surfaceVariant,
                                 modifier = Modifier.fillMaxSize()) {
                                 Box(contentAlignment = Alignment.Center) {
-                                    Text(when (item.media.mediaType) {
-                                        "book" -> "📖"; "movie" -> "🎬"; "show" -> "📺"
-                                        else -> "?"
-                                    })
+                                    Icon(
+                                        painter = painterResource(item.media.mediaType.iconRes()),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text(item.media.title, style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium)
-                            Text(stringResource(item.status.labelRes),
-                                style = MaterialTheme.typography.labelSmall,
+                            Text(item.media.title, style = MaterialTheme.typography.titleSmall)
+                            Spacer(Modifier.height(4.dp))
+                            StatusBadge(status = item.status)
+                        }
+                    }
+                }
+            }
+
+            // saved items. same row layout as the tracked list above, minus the status
+            // badge ; favorites don't have one. this is the only place they show up.
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+
+            Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.profile_favorites),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.align(Alignment.Start))
+
+            Spacer(Modifier.height(8.dp))
+
+            if (favorites.isEmpty()) {
+                Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.profile_no_favorites),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                favorites.forEach { favorite ->
+                    // media is optional on a Favorite, so skip anything without it
+                    // rather than drawing a blank row.
+                    val media = favorite.media ?: return@forEach
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp, 56.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (media.coverUrl != null) {
+                                AsyncImage(
+                                    model              = media.coverUrl,
+                                    contentDescription = media.title,
+                                    contentScale       = ContentScale.Crop,
+                                    modifier           = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Surface(color = MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier.fillMaxSize()) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            painter = painterResource(media.mediaType.iconRes()),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(media.title, style = MaterialTheme.typography.titleSmall)
+                            Spacer(Modifier.height(2.dp))
+                            Text(media.creatorCredit(LocalContext.current),
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -168,7 +239,7 @@ fun MyProfileScreen(
 @Composable
 private fun StatItem(value: String, labelRes: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(value, style = MaterialTheme.typography.titleLarge)
         Text(stringResource(labelRes), style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

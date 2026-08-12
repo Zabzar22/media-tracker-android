@@ -1,12 +1,20 @@
 <resources>
     <string name="app_name">Media Tracker</string>
-    <string name="app_tagline">Track what you read, watch, and discover.</string>
+    <string name="app_tagline">Track what you love</string>
 
     <!-- Auth -->
     <string name="email_label">Email</string>
     <string name="password_label">Password</string>
-    <string name="sign_in_button">Sign In</string>
-    <string name="register_prompt">Don\'t have an account? Register</string>
+    <string name="display_name_label">Display Name</string>
+    <string name="username_label">Username</string>
+    <string name="confirm_password_label">Confirm Password</string>
+    <string name="sign_in_button">Log In</string>
+    <string name="sign_up_button">Sign Up</string>
+    <string name="register_prompt">Don\'t have an account?</string>
+    <string name="login_prompt">Already have an account?</string>
+    <string name="log_in_action">Log In</string>
+    <string name="register_title">Create Account</string>
+    <string name="register_tagline">Join the community</string>
     <string name="register_not_implemented">Create Account is not implemented yet.</string>
 
     <!-- Navigation -->
@@ -20,12 +28,19 @@
     <string name="feed_title">Feed</string>
 
     <!-- Library -->
-    <string name="library_title">Library</string>
+    <string name="library_title">My Library</string>
+    <string name="library_add">+Add</string>
     <string name="filter_all">All</string>
     <string name="filter_books">Books</string>
     <string name="filter_movies">Movies</string>
     <string name="filter_shows">Shows</string>
+    <string name="filter_comics">Comics</string>
+    <string name="filter_albums">Albums</string>
     <string name="library_empty">Nothing here yet.\nSearch for something to add.</string>
+    <string name="library_error">Couldn\'t load your library.</string>
+    <string name="library_empty_status">Nothing in \'%1$s\' yet.</string>
+    <string name="profile_favorites">Favorites</string>
+    <string name="profile_no_favorites">Nothing saved yet.</string>
     <string name="library_items_count">%1$d items</string>
     <string name="library_item_count">%1$d item</string>
     <string name="action_more_options">More options</string>
@@ -63,6 +78,12 @@
     <string name="settings_change_password">Change password</string>
     <string name="settings_dark_mode">Dark mode</string>
 
+    <!-- Search -->
+    <string name="search_hint">Search books, movies, shows…</string>
+    <string name="search_popular_this_week">Popular This Week</string>
+    <string name="search_results_count">%1$d results</string>
+    <string name="search_showing_count">Showing %1$d of %2$d results</string>
+
     <!-- Stubs -->
     <string name="search_not_implemented">Search is not implemented yet.</string>
     <string name="detail_not_implemented">Media Detail is not implemented yet.\n(mediaId = %1$d)</string>
@@ -81,12 +102,63 @@
     <string name="feed_user_someone">Someone</string>
     <string name="feed_media_something">something</string>
 
+    <!-- Activity Feed — header action phrases (name shown separately) -->
+    <string name="feed_header_added">added to Want To</string>
+    <string name="feed_header_started">started</string>
+    <string name="feed_header_finished">finished</string>
+    <string name="feed_header_finished_reading">finished reading</string>
+    <string name="feed_header_finished_watching">finished watching</string>
+    <string name="feed_header_reviewed">reviewed</string>
+    <string name="feed_header_updated">updated</string>
+
     <!-- Errors -->
     <string name="error_empty_credentials">Please enter your email and password.</string>
+    <string name="error_invalid_credentials">Incorrect email or password.</string>
+    <string name="error_empty_fields">Please fill in all fields.</string>
+    <string name="error_passwords_mismatch">Passwords do not match.</string>
+    <string name="error_email_or_username_taken">That email or username is already taken.</string>
+    <string name="error_network">Network error. Check your connection and try again.</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
 
     <!-- Media -->
     <string name="media_unknown_author">Unknown Author</string>
     <string name="media_unknown_director">Unknown Director</string>
     <string name="media_unknown_creator">Unknown Creator</string>
+
+    <!-- Media Detail -->
+    <string name="detail_want_to">+ Want To</string>
+    <string name="detail_save">Save</string>
+    <string name="detail_saved">Saved</string>
+    <string name="detail_about">About</string>
+    <string name="detail_write_review">+ Write Review</string>
+    <string name="detail_reviews">Reviews (%1$d)</string>
+    <string name="detail_rating_count">(%1$s)</string>
+    <string name="detail_stat_year">Year</string>
+    <string name="detail_stat_genre">Genre</string>
+    <string name="detail_stat_pages">Pages</string>
+    <string name="detail_stat_runtime">Runtime</string>
+    <string name="detail_stat_runtime_value">%1$d min</string>
+    <string name="detail_stat_seasons_eps">Seasons · Eps</string>
+    <string name="detail_stat_seasons_eps_value">%1$d · %2$d</string>
+    <string name="detail_stat_unknown">&#8212;</string>
+    <string name="detail_not_found">Media not found.</string>
+    <string name="detail_error">Couldn\'t load this item.</string>
+    <string name="detail_no_reviews">No reviews yet. Be the first!</string>
+    <string name="detail_your_review">Your review</string>
+    <string name="action_retry">Retry</string>
+
+    <!-- Write Review -->
+    <string name="review_title">Write a Review</string>
+    <string name="review_rating_label">Your rating</string>
+    <string name="review_rating_hint">Tap a star to rate</string>
+    <string name="review_rating_value">%1$d of %2$d stars</string>
+    <string name="review_star_description">%1$d star</string>
+    <string name="review_text_label">Your review (optional)</string>
+    <string name="review_text_placeholder">What did you think?</string>
+    <string name="review_text_counter">%1$d / %2$d</string>
+    <string name="review_share_to_feed">Share to activity feed</string>
+    <string name="review_post_button">Post Review</string>
+    <string name="review_error_already_reviewed">You\'ve already reviewed this.</string>
+    <string name="review_error_generic">Couldn\'t post your review. Try again.</string>
 
 </resources>
