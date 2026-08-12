@@ -10,28 +10,28 @@
 
 **Link:** https://github.com/Zabzar22/media-tracker-android/commits/week-11
 
-**Pull request:** *(TODO — paste the week-11 PR link once it's open)*
+**Pull request:** https://github.com/fascineh1/media-tracker-android/pull/11
 
 ---
 
 ## Code Review
 
-**Reviewed:** *(TODO — pending a pod mate's week-11 PR)*
-**Link to my review:** *(TODO)*
+**Reviewed:** Issa Ismail Ali
+**Link to my review:** https://github.com/Issa-Ismail-Ali/media-tracker-android/pull/10#issuecomment-5270108826
 
 ### What I Looked At
 
-I did as much of this section as I could without their PRs. As of tonight there isn't a `week-11` branch on either of my pod mates' repos yet — I checked both with `git ls-remote` instead of trusting my local copies, and Issa's newest branch is `week-08` and Samba's is `week-10`. So there's no bonus feature code for me to open and read.
-
-I didn't want to write a review of something that isn't there, so I've left the three subsections below blank on purpose rather than filling them with guesses. I know both of them have finals in other classes landing in the same two weeks as this sprint, and I think this week being a different format matters too — there's no professor branch to compare against this time, so just getting started takes longer than it usually does. My guess is they've got more done locally than GitHub shows and haven't pushed yet. As soon as either of them opens a PR I'll read it, leave a real review, and come back and fill this in with the link.
+His week-11 PR, the first pass at Quotes. I went through `QuotesViewModel.kt` and `QuotesScreen.kt` mostly, since that's where the new state and the list itself live, and skimmed the `MediaDetailScreen.kt`/`MediaDetailViewModel.kt` changes to see how saving a quote from the detail page hooks in. This is later than I meant to get to it — there wasn't a `week-11` branch on his repo until after our own week-11 was basically wrapped, so this review is going up alongside the reflection instead of before it.
 
 ### What I Noticed
 
-*(TODO — pending)*
+Two things I liked, one thing I flagged. `loadNextPageIfNeeded()` fires a few items before the actual bottom of the list instead of waiting for the very last item, which means the next page has a head start loading instead of showing a spinner right as you hit the end. Small touch, but it's the kind of thing that's easy to skip in a Week 1 pass and he didn't. The card styling on `QuoteCard` is clean too — reads well, nothing crowded.
+
+The thing I flagged: in `loadNextPageIfNeeded()`, `current` gets grabbed once at the top of the function, and then after the fetch comes back the new state is built off of `current.copy(...)` instead of reading state fresh. If anything else changed `_uiState` while that request was in flight, this would write over it with the older snapshot. I said in the comment I'm not sure it can actually happen given how things are wired right now, and I didn't try to prove it — I flagged it because I ran into basically the same shape of bug in my own feature this week (the detail screen not knowing the reviews list under it had gone stale), so it was the first thing that jumped out reading someone else's ViewModel right after fighting my own version of it.
 
 ### Comments I Left
 
-*(TODO — pending)*
+Opened with the two positives — the early pagination trigger and the card styling — before getting into the `current` staleness question, and was upfront that I wasn't certain it was a real bug rather than a "looks a little familiar" flag, since I don't have full context on how the rest of his state updates are sequenced. Closed the comment on a personal note since it's the last stretch of the class.
 
 ---
 
@@ -66,7 +66,7 @@ I also fixed two login bugs I ran into on the way. Sign-out was only navigating 
 
 **What I'm blocked on, if anything:**
 
-Nothing on the feature. The only thing I'm waiting on is the code review, and that just needs one of my pod mates to push.
+Nothing on the feature. The code review was the one open item and it's done now, a bit later than I wanted — see the note above about waiting on the `week-11` branch to actually exist.
 
 One smaller thing worth mentioning: I still can't build from the command line. There's no Gradle wrapper in the repo and only JDK 8 on my PATH, so everything happens inside Android Studio. That means everything I called "tested" above was tested by hand in the emulator, not by a test suite. That's fine this week and it stops being fine next week, when I owe you a test.
 
@@ -96,7 +96,7 @@ I can see that it's blunt. It refetches every single time the screen comes to th
 
 I know there are at least two other ways to do it and I can't tell which one is normal. One is passing a result back through the nav controller's back stack entry, where the write screen sets something on its way out and the detail screen reads it. That's precise, but it means the detail screen has to know that a "someone posted a review" signal exists in the first place. The other is making the repository the single source of truth and having both screens watch the same flow, so posting a review updates the list without anybody having to tell anybody. That second one sounds like the actual answer to me, since it gets rid of the problem instead of patching around it, but it's a much bigger change than one line and I don't know if that's what you'd reach for in an app this size or if it's something you only build once several screens really need it.
 
-The other thing I'm unsure about is `TokenStore`. It's a plain `object`, so it's a global with mutable state, and now it holds `currentUser` on top of the two tokens, and my ViewModels read `TokenStore.currentUserId` straight out of it. It works, and pulling the user out of the `POST /tokens` response instead of calling `GET /users/me` saves a request on every detail screen, which I was happy about. But every ViewModel reaching into a global is exactly the thing I thought constructor injection was supposed to prevent, and I can already see it costing me something. `mineFirst()` decides what "mine" means by reading a singleton, so a unit test of it can't just hand in a user — it has to set a global first and remember to unset it afterward. In Week 10 I made the repositories injectable specifically so tests would have a seam, and then this week I put the user identity somewhere with no seam at all. I don't know if that's a real inconsistency I should fix before I write next week's test, or if session state is just the case where a singleton is considered fine.
+The other thing I'm unsure about is `TokenStore`. It's a plain `object`, so it's a global with mutable state and now it holds `currentUser` on top of the two tokens, and my ViewModels read `TokenStore.currentUserId` straight out of it. It works, and pulling the user out of the `POST /tokens` response instead of calling `GET /users/me` saves a request on every detail screen, which I was happy about. But every ViewModel reaching into a global is exactly the thing I thought constructor injection was supposed to prevent, and I can already see it costing me something. `mineFirst()` decides what "mine" means by reading a singleton, so a unit test of it can't just hand in a user — it has to set a global first and remember to unset it afterward. In Week 10 I made the repositories injectable specifically so tests would have a seam, and then this week I put the user identity somewhere with no seam at all. I don't know if that's a real inconsistency I should fix before I write next week's test, or if session state is just the case where a singleton is considered fine.
 
 ---
 
