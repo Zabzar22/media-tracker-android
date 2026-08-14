@@ -2,18 +2,23 @@ package edu.metrostate.ics342.mediatracker.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
+import edu.metrostate.ics342.mediatracker.R
+import edu.metrostate.ics342.mediatracker.data.LoginResult
+import edu.metrostate.ics342.mediatracker.data.UserRepository
+import edu.metrostate.ics342.mediatracker.data.network.DefaultUserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class AuthViewModel : ViewModel() {
+class AuthViewModel(
+    private val userRepository: UserRepository = DefaultUserRepository()
+) : ViewModel() {
 
     sealed class AuthUiState {
-        object Idle    : AuthUiState()
-        object Loading : AuthUiState()
-        object Success : AuthUiState()
+        data object Idle    : AuthUiState()
+        data object Loading : AuthUiState()
+        data object Success : AuthUiState()
         data class Error(val msgResId: Int) : AuthUiState()
     }
 
@@ -34,11 +39,22 @@ class AuthViewModel : ViewModel() {
     fun onLoginClick() {
         viewModelScope.launch {
             _loginState.value = AuthUiState.Loading
-            delay(800)
-            if (_email.value.isNotBlank() && _password.value.isNotBlank()) {
-                _loginState.value = AuthUiState.Success
-            } else {
-                _loginState.value = AuthUiState.Error(edu.metrostate.ics342.mediatracker.R.string.error_empty_credentials)
+
+            if (_email.value.isBlank() || _password.value.isBlank()) {
+                _loginState.value = AuthUiState.Error(R.string.error_empty_credentials)
+                return@launch
+            }
+
+            val result = userRepository.login(
+                email    = _email.value,
+                password = _password.value
+            )
+
+            _loginState.value = when (result) {
+                LoginResult.Success            -> AuthUiState.Success
+                LoginResult.InvalidCredentials -> AuthUiState.Error(R.string.error_invalid_credentials)
+                LoginResult.NetworkError       -> AuthUiState.Error(R.string.error_network)
+                LoginResult.UnknownError       -> AuthUiState.Error(R.string.error_generic)
             }
         }
     }

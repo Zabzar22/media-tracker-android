@@ -1,19 +1,23 @@
 package edu.metrostate.ics342.mediatracker.ui.library
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -21,43 +25,56 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import edu.metrostate.ics342.mediatracker.data.model.LibraryItem
 import edu.metrostate.ics342.mediatracker.data.model.LibraryStatus
+import edu.metrostate.ics342.mediatracker.data.model.MediaType
 import edu.metrostate.ics342.mediatracker.data.model.creatorCredit
+import edu.metrostate.ics342.mediatracker.data.model.iconRes
+import edu.metrostate.ics342.mediatracker.ui.components.StatusBadge
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     onMediaClick: (Int) -> Unit,
+    onAddClick: () -> Unit,
     viewModel: LibraryViewModel = viewModel()
 ) {
     val items     by viewModel.libraryItems.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val selectedStatus by viewModel.filterState.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val actionError by viewModel.actionError.collectAsState()
 
-    var selectedStatus by remember { mutableStateOf(LibraryStatus.WANT_TO) }
-    var selectedType   by remember { mutableStateOf("all") }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.library_title)) })
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf(
-                "all"   to edu.metrostate.ics342.mediatracker.R.string.filter_all,
-                "book"  to edu.metrostate.ics342.mediatracker.R.string.filter_books,
-                "movie" to edu.metrostate.ics342.mediatracker.R.string.filter_movies,
-                "show"  to edu.metrostate.ics342.mediatracker.R.string.filter_shows
-            )
-                .forEach { (key, labelRes) ->
-                    FilterChip(
-                        selected = selectedType == key,
-                        onClick  = { selectedType = key },
-                        label    = { Text(stringResource(labelRes)) }
-                    )
-                }
+    // a tap that got rolled back shows up down here instead of taking over the screen.
+    // clearing it afterwards keeps it from showing again on the next recomposition.
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(actionError) {
+        actionError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearActionError()
         }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        TopAppBar(
+            title = { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.library_title)) },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background
+            ),
+            actions = {
+                FilledTonalButton(
+                    onClick = onAddClick,
+                    modifier = Modifier.padding(end = 8.dp).height(36.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor   = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
+                ) {
+                    Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.library_add))
+                }
+            }
+        )
 
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier
@@ -69,8 +86,13 @@ fun LibraryScreen(
                     shape    = SegmentedButtonDefaults.itemShape(
                         index = index, count = LibraryStatus.values().size),
                     selected = selectedStatus == status,
-                    onClick  = { selectedStatus = status },
-                    label    = { Text(stringResource(status.labelRes)) }
+                    onClick  = { viewModel.updateFilter(status) },
+                    label    = { Text(stringResource(status.labelRes)) },
+                    icon     = {},
+                    colors   = SegmentedButtonDefaults.colors(
+                        activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        activeContentColor   = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 )
             }
         }
@@ -84,17 +106,39 @@ fun LibraryScreen(
             return@Column
         }
 
-        val filteredItems = items
-            .filter { it.status == selectedStatus }
-            .filter { selectedType == "all" || it.media.mediaType == selectedType }
+        // the request came back bad, so say so and offer a retry instead of showing
+        // an empty library that isn't really empty.
+        val error = errorMessage
+        if (error != null) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        error.ifBlank { stringResource(edu.metrostate.ics342.mediatracker.R.string.library_error) },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(onClick = { viewModel.loadLibrary() }) {
+                        Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.action_retry))
+                    }
+                }
+            }
+            return@Column
+        }
 
-        if (filteredItems.isEmpty()) {
+        if (items.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
+                // names the tab you're on, so "Finished" empty reads differently from
+                // "Want To" empty instead of one message covering all three.
                 Text(
-                    stringResource(edu.metrostate.ics342.mediatracker.R.string.library_empty),
+                    stringResource(
+                        edu.metrostate.ics342.mediatracker.R.string.library_empty_status,
+                        stringResource(selectedStatus.labelRes)
+                    ),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -104,8 +148,8 @@ fun LibraryScreen(
         }
 
         Text(
-            if (filteredItems.size == 1) stringResource(edu.metrostate.ics342.mediatracker.R.string.library_item_count, filteredItems.size)
-            else stringResource(edu.metrostate.ics342.mediatracker.R.string.library_items_count, filteredItems.size),
+            if (items.size == 1) stringResource(edu.metrostate.ics342.mediatracker.R.string.library_item_count, items.size)
+            else stringResource(edu.metrostate.ics342.mediatracker.R.string.library_items_count, items.size),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             style    = MaterialTheme.typography.labelMedium,
             color    = MaterialTheme.colorScheme.onSurfaceVariant
@@ -115,7 +159,7 @@ fun LibraryScreen(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(filteredItems, key = { it.mediaId }) { item ->
+            items(items, key = { it.mediaId }) { item ->
                 LibraryItemCard(
                     item           = item,
                     onClick        = { onMediaClick(item.mediaId) },
@@ -124,6 +168,12 @@ fun LibraryScreen(
                 )
             }
         }
+    }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier  = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -161,7 +211,8 @@ private fun LibraryItemCard(
     Card(
         modifier  = Modifier.fillMaxWidth().clickable { onClick() },
         shape     = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -178,13 +229,27 @@ private fun LibraryItemCard(
                         modifier          = Modifier.fillMaxSize()
                     )
                 } else {
-                    Surface(color = MaterialTheme.colorScheme.surfaceVariant,
+                    // Colored cover tile per media type — matches the feed/search cards and
+                    // the wireframe (book = indigo, movie = pink, show = amber).
+                    val coverColor = when (item.media.mediaType) {
+                        MediaType.BOOK  -> MaterialTheme.colorScheme.primaryContainer
+                        MediaType.MOVIE -> MaterialTheme.colorScheme.secondaryContainer
+                        MediaType.SHOW  -> MaterialTheme.colorScheme.tertiaryContainer
+                    }
+                    val iconTint = when (item.media.mediaType) {
+                        MediaType.BOOK  -> MaterialTheme.colorScheme.onPrimaryContainer
+                        MediaType.MOVIE -> MaterialTheme.colorScheme.onSecondaryContainer
+                        MediaType.SHOW  -> MaterialTheme.colorScheme.tertiary
+                    }
+                    Surface(color = coverColor,
                         modifier = Modifier.fillMaxSize()) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(when (item.media.mediaType) {
-                                "book" -> "📖"; "movie" -> "🎬"; "show" -> "📺"
-                                else -> "?"
-                            }, style = MaterialTheme.typography.titleLarge)
+                            Icon(
+                                painter = painterResource(item.media.mediaType.iconRes()),
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                tint = iconTint
+                            )
                         }
                     }
                 }
@@ -194,16 +259,15 @@ private fun LibraryItemCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.media.title, style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold, maxLines = 2)
+                    maxLines = 2)
                 Spacer(Modifier.height(2.dp))
                 Text(item.media.creatorCredit(LocalContext.current),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
-                SuggestionChip(
-                    onClick = { statusDialogVisible = true },
-                    label   = { Text(stringResource(item.status.labelRes),
-                        style = MaterialTheme.typography.labelSmall) }
+                StatusBadge(
+                    status  = item.status,
+                    onClick = { statusDialogVisible = true }
                 )
             }
 

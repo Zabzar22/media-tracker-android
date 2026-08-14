@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -21,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import edu.metrostate.ics342.mediatracker.data.FakeMediaRepository
 import edu.metrostate.ics342.mediatracker.data.model.UserProfile
+import edu.metrostate.ics342.mediatracker.data.model.iconRes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,8 +84,7 @@ fun UserProfileScreen(
             }
 
             Spacer(Modifier.height(12.dp))
-            Text(user.displayName, style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold)
+            Text(user.displayName, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(2.dp))
             Text("@${user.username}", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -99,20 +100,17 @@ fun UserProfileScreen(
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(user.followerCount.toString(), style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold)
+                    Text(user.followerCount.toString(), style = MaterialTheme.typography.titleLarge)
                     Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.profile_followers), style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(user.followingCount.toString(), style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold)
+                    Text(user.followingCount.toString(), style = MaterialTheme.typography.titleLarge)
                     Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.profile_following), style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(user.trackedCount.toString(), style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold)
+                    Text(user.trackedCount.toString(), style = MaterialTheme.typography.titleLarge)
                     Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.profile_tracked), style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -125,12 +123,18 @@ fun UserProfileScreen(
             if (isFollowing) {
                 OutlinedButton(
                     onClick  = { isFollowing = false },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = RoundedCornerShape(20.dp)
                 ) { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.action_following)) }
             } else {
-                Button(
+                FilledTonalButton(
                     onClick  = { isFollowing = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = RoundedCornerShape(20.dp),
+                    colors   = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor   = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 ) { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.action_follow)) }
             }
 
@@ -154,16 +158,17 @@ fun UserProfileScreen(
                         Surface(color = MaterialTheme.colorScheme.surfaceVariant,
                             modifier = Modifier.fillMaxSize()) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text(when (item.media.mediaType) {
-                                    "book" -> "📖"; "movie" -> "🎬"; "show" -> "📺"
-                                    else -> "?"
-                                })
+                                Icon(
+                                    painter = painterResource(item.media.mediaType.iconRes()),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
                     Spacer(Modifier.width(12.dp))
-                    Text(item.media.title, style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium)
+                    Text(item.media.title, style = MaterialTheme.typography.titleSmall)
                 }
             }
         }

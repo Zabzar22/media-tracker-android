@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -107,8 +108,7 @@ private fun UserRow(
         Spacer(Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(user.displayName, style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold)
+            Text(user.displayName, style = MaterialTheme.typography.titleSmall)
             Text("@${user.username}", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -119,12 +119,18 @@ private fun UserRow(
             OutlinedButton(
                 onClick  = { following = false },
                 modifier = Modifier.height(32.dp),
+                shape = RoundedCornerShape(20.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
             ) { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.action_following), style = MaterialTheme.typography.labelMedium) }
         } else {
-            Button(
+            FilledTonalButton(
                 onClick  = { following = true },
                 modifier = Modifier.height(32.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor   = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
             ) { Text(stringResource(edu.metrostate.ics342.mediatracker.R.string.action_follow), style = MaterialTheme.typography.labelMedium) }
         }
